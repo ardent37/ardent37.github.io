@@ -1852,13 +1852,6 @@ function setupAgents() {
   };
   document.addEventListener('click', (e) => { if (!menu.hidden && !menu.contains(e.target)) close(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
-  // En el móvil la cabecera no tiene sitio: el selector va en una fila propia debajo
-  if (isMobile()) {
-    const row = document.createElement('div');
-    row.className = 'agent-row';
-    row.appendChild($('agentSelect'));
-    $('tools').before(row);
-  }
   paint();
   window.__paintAgents = paint;
 }
@@ -1940,9 +1933,27 @@ function setupOffer() {
 async function init() {
   applySeoMeta();
   applyStaticTexts();
+  // En el móvil el selector enseña solo el idioma elegido y, al pulsarlo, despliega los demás
+  const langSw = document.querySelector('.lang-switch');
+  const closeLang = () => langSw.classList.remove('open');
   document.querySelectorAll('.lang-switch [data-lang]').forEach((b) => {
-    b.onclick = () => setLanguage(b.dataset.lang);
+    b.onclick = (e) => {
+      if (isMobile() && b.getAttribute('aria-pressed') === 'true') {
+        e.stopPropagation();
+        const open = !langSw.classList.contains('open');
+        langSw.classList.toggle('open', open);
+        if (open) {
+          let n = 0;
+          langSw.querySelectorAll('[data-lang][aria-pressed="false"]').forEach((o) => o.style.setProperty('--i', n++));
+        }
+        return;
+      }
+      closeLang();
+      setLanguage(b.dataset.lang);
+    };
   });
+  document.addEventListener('click', (e) => { if (!langSw.contains(e.target)) closeLang(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLang(); });
   renderTools();
   setupResizer();
   setupUrlBar();

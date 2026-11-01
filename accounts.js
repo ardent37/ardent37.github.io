@@ -29,6 +29,7 @@ Object.assign(I18N.es, {
   errExpired: 'El código ha caducado. Pide uno nuevo.',
   errGeneric: 'Algo ha fallado. Inténtalo de nuevo.',
   errMail: 'No se pudo enviar el correo. Inténtalo más tarde.',
+  errNetwork: 'No se puede conectar con el servidor ahora mismo. Algunas operadoras bloquean temporalmente el servicio durante los partidos de fútbol: prueba de nuevo más tarde o con una VPN.',
   accTitle: 'Tu cuenta',
   accNick: 'Tu apodo en hauls compartidos',
   accMarketing: 'Recibir novedades y ofertas por correo',
@@ -99,6 +100,7 @@ Object.assign(I18N.en, {
   errExpired: 'The code has expired. Request a new one.',
   errGeneric: 'Something went wrong. Please try again.',
   errMail: 'The email couldn’t be sent. Try again later.',
+  errNetwork: 'Can’t reach the server right now. Some ISPs temporarily block the service during football matches: try again later or use a VPN.',
   accTitle: 'Your account',
   accNick: 'Your nickname in shared hauls',
   accMarketing: 'Receive news and offers by email',
@@ -169,6 +171,7 @@ Object.assign(I18N.pl, {
   errExpired: 'Kod wygasł. Poproś o nowy.',
   errGeneric: 'Coś poszło nie tak. Spróbuj ponownie.',
   errMail: 'Nie udało się wysłać e-maila. Spróbuj później.',
+  errNetwork: 'Nie można teraz połączyć się z serwerem. Niektórzy operatorzy w Hiszpanii czasowo blokują usługę podczas meczów piłkarskich: spróbuj później lub użyj VPN.',
   accTitle: 'Twoje konto',
   accNick: 'Twój pseudonim we wspólnych haulach',
   accMarketing: 'Otrzymuj nowości i oferty e-mailem',
@@ -229,11 +232,22 @@ const Accounts = (() => {
 
   /* ---------- API ---------- */
   async function call(path, { method = 'GET', body, text = false } = {}) {
-    const res = await fetch(API + path, {
-      method,
-      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}) },
-      body: body === undefined ? undefined : typeof body === 'string' ? body : JSON.stringify(body),
-    });
+    // Si el servidor no responde (p. ej. bloqueos de operadoras a Cloudflare), el inicio de sesión no se queda colgado
+    const ctl = new AbortController();
+    const timer = path.startsWith('/auth/') ? setTimeout(() => ctl.abort(), 12000) : 0;
+    let res;
+    try {
+      res = await fetch(API + path, {
+        method,
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}) },
+        body: body === undefined ? undefined : typeof body === 'string' ? body : JSON.stringify(body),
+        signal: ctl.signal,
+      });
+    } catch {
+      throw Object.assign(new Error('network'), { status: 0, code: 'network' });
+    } finally {
+      clearTimeout(timer);
+    }
     if (!res.ok) {
       let error = 'server';
       try { error = (await res.json()).error || error; } catch { /* sin cuerpo */ }
@@ -302,7 +316,7 @@ const Accounts = (() => {
 
   const authError = (e) => ({
     bad_email: t('errBadEmail'), wait: t('errWait'), too_many: t('errTooMany'), bad_code: t('errBadCode'),
-    expired: t('errExpired'), mail_failed: t('errMail'),
+    expired: t('errExpired'), mail_failed: t('errMail'), network: t('errNetwork'),
   }[e.code] || t('errGeneric'));
 
   /* ---------- Inicio de sesión ---------- */
@@ -534,7 +548,7 @@ const Accounts = (() => {
   /* ---------- Importar ---------- */
   const sheetErr = (e) => ({
     bad_url: t('importBadUrl'), blocked: t('importBlocked'), private: t('importPrivate'), not_found: t('importNotFound'), too_big: t('importTooBig'),
-    max_imports: t('importMax'), max_products: t('importMaxProducts'),
+    max_imports: t('importMax'), max_products: t('importMaxProducts'), network: t('errNetwork'),
   }[e.code] || t('errGeneric'));
 
   const URL_RE = /https?:\/\/[^\s"'<>]+/g;

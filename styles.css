@@ -1506,11 +1506,6 @@ body.modal-open { overflow: hidden; }
 .agent-btn .chev { color: var(--muted); transition: transform .2s var(--ease); }
 .agent-btn[aria-expanded="true"] .chev { transform: rotate(180deg); }
 .agent-menu { left: auto; right: 0; min-width: 170px; }
-@media (max-width: 820px) {
-  .agent-row { display: flex; padding: 0 var(--gutter) 8px; }
-  .agent-row .agent-select { margin: 0; }
-  .agent-row .agent-menu { left: 0; right: auto; }
-}
 
 /* Color de acento según el agente de compra elegido */
 :root:root[data-agent="kakobuy"] { --accent: #f5222d; --accent-hover: color-mix(in srgb, #f5222d 86%, #000); --focus: #f5222d; --menu-hover: #f5222d; }
@@ -1538,4 +1533,46 @@ body.modal-open { overflow: hidden; }
 @media (max-width: 820px) {
   .agent-btn { padding: 0 7px 0 7px; gap: 4px; }
   .agent-btn .lbl { display: none; }
+}
+
+/* Móvil: el selector de idioma muestra solo el idioma elegido y se despliega al pulsarlo */
+@media (max-width: 820px) {
+  .lang-switch { position: relative; margin-right: 2px; }
+  .lang-switch button[aria-pressed="true"]::after {
+    content: "";
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    margin: 0 1px 2px 5px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: rotate(45deg);
+    transition: transform .2s var(--ease);
+  }
+  .lang-switch.open button[aria-pressed="true"]::after { transform: rotate(-135deg) translate(-1px, -1px); }
+  .lang-switch button[aria-pressed="false"] { display: none; }
+  .lang-switch.open::before {
+    content: "";
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    height: 62px;
+    border-radius: 8px;
+    background: var(--surface);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .2), 0 0 0 .5px var(--hairline);
+    z-index: 40;
+  }
+  .lang-switch.open button[aria-pressed="false"] {
+    display: block;
+    position: absolute;
+    z-index: 41;
+    top: calc(100% + 6px + var(--i, 0) * 29px);
+    left: 2px;
+    right: 2px;
+    height: 27px;
+    color: var(--ink);
+  }
+  .lang-switch.open button[aria-pressed="false"]:hover { background: var(--fill); }
+  .brand-logo { width: 124px; height: 18px; }
 }
