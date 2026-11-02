@@ -1108,7 +1108,7 @@ function productMenu(p) {
   const url = agentUrl(p.link);
   if (isMobile()) {
     return [
-      { icon: '↗', label: t('openInApp').replace('{agent}', AGENTS[agentId].name), action: () => openInApp(agentOpenUrl(p.link)) },
+      { icon: '↗', label: t('openInApp', { agent: AGENTS[agentId].name }), action: () => openInApp(agentOpenUrl(p.link)) },
       { icon: '⎘', label: t('copyLink'), action: () => navigator.clipboard?.writeText(url) },
       '-',
       ...(CONFIG.accountApi ? [{ icon: '＋', label: t('addToHaul'), action: () => window.Hauls?.addMenu(p) }] : []),
