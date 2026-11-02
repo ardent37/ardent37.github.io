@@ -84,7 +84,7 @@ const I18N = {
     urlNoConvert: 'No se puede convertir ese enlace a USFans (el ID del producto está cifrado). Búscalo en USFans.',
     tabUsfans: 'USFans',
     tabProduct: 'Producto',
-    openInApp: 'Abrir en la app de USFans',
+    openInApp: 'Abrir en la app de {agent}',
     moreOptions: 'Más opciones',
     offerTitle: 'Un 40 % de descuento en tu envío',
     offerText: 'Regístrate ahora en USFans con nuestro código y consigue tu cupón del 40 % de descuento en el envío.',
@@ -180,7 +180,7 @@ const I18N = {
     urlNoConvert: 'That link can’t be converted to USFans (the product ID is encrypted). Look it up on USFans.',
     tabUsfans: 'USFans',
     tabProduct: 'Product',
-    openInApp: 'Open in the USFans app',
+    openInApp: 'Open in the {agent} app',
     moreOptions: 'More options',
     offerTitle: '40% off your shipping',
     offerText: 'Sign up to USFans now with our code and get your coupon for 40% off shipping.',
@@ -276,7 +276,7 @@ const I18N = {
     urlNoConvert: 'Tego linku nie da się zamienić na USFans (identyfikator produktu jest zaszyfrowany). Wyszukaj go w USFans.',
     tabUsfans: 'USFans',
     tabProduct: 'Produkt',
-    openInApp: 'Otwórz w aplikacji USFans',
+    openInApp: 'Otwórz w aplikacji {agent}',
     moreOptions: 'Więcej opcji',
     offerTitle: '40% zniżki na wysyłkę',
     offerText: 'Zarejestruj się teraz w USFans z naszym kodem i odbierz kupon na 40% zniżki na wysyłkę.',
@@ -1098,7 +1098,7 @@ function productMenu(p) {
   const url = agentUrl(p.link);
   if (isMobile()) {
     return [
-      { icon: '↗', label: t('openInApp'), action: () => openInApp(url) },
+      { icon: '↗', label: t('openInApp').replace('{agent}', AGENTS[agentId].name), action: () => openInApp(url) },
       { icon: '⎘', label: t('copyLink'), action: () => navigator.clipboard?.writeText(url) },
       '-',
       ...(CONFIG.accountApi ? [{ icon: '＋', label: t('addToHaul'), action: () => window.Hauls?.addMenu(p) }] : []),
