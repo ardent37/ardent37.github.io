@@ -834,6 +834,53 @@ const Accounts = (() => {
     }, 1500);
   }
 
+  // Caché compartida: lo que consulta un visitante a USFans queda en nuestra base de datos y los demás lo leen de ahí,
+  // así USFans recibe una sola consulta por producto en vez de una por visitante.
+  const SHARED_TTL = 14 * 24 * 3600 * 1000;
+  const sharedMiss = new Map(); // producto → cuándo se comprobó que aún no estaba
+  const contrib = new Map();
+  let contribTimer = 0;
+
+  async function sharedFetch(keys) {
+    if (!me || !API) return;
+    const cache = goodsLoad();
+    const now = Date.now();
+    const need = [...new Set(keys)].filter((k) => {
+      const hit = cache.get(k);
+      if (hit && now - hit.ts < GOODS_TTL) return false;
+      const miss = sharedMiss.get(k);
+      return !(miss && now - miss < 10 * 60 * 1000);
+    }).slice(0, 60);
+    if (!need.length) return;
+    try {
+      const r = await call('/goods/lookup', { method: 'POST', body: { keys: need } });
+      for (const k of need) {
+        const e = r.items?.[k];
+        if (e && e.n && now - e.ts < SHARED_TTL) cache.set(k, { ts: now, v: { status: 'ok', n: e.n, i: e.i || '', p: e.p || '' } });
+        else sharedMiss.set(k, now);
+      }
+      goodsSave();
+    } catch {
+      need.forEach((k) => sharedMiss.set(k, now - 9 * 60 * 1000)); // se reintenta en un minuto
+    }
+  }
+
+  function flushContrib() {
+    clearTimeout(contribTimer);
+    contribTimer = setTimeout(async () => {
+      const items = [...contrib.values()].slice(0, 100);
+      items.forEach((x) => contrib.delete(x.k));
+      try { await call('/goods/contribute', { method: 'POST', body: { items } }); } catch { /* no es imprescindible */ }
+      if (contrib.size) flushContrib();
+    }, 4000);
+  }
+
+  function contribute(k, v) {
+    if (!me || !API || v.status !== 'ok' || !v.n) return;
+    contrib.set(k, { k, n: v.n, i: v.i || '', p: v.p || '' });
+    flushContrib();
+  }
+
   async function fetchGoodsDirect(platform, id) {
     try {
       const r = await fetch(`${GOODS_API}?channel=${platform}&goodsId=${encodeURIComponent(id)}&refresh=false&queryDelivery=false&activityId=`, { headers: { currency: 'EUR' } });
@@ -860,6 +907,7 @@ const Accounts = (() => {
 
   // Devuelve, para cada producto, su estado (de la caché o consultando a USFans con una pausa entre peticiones)
   async function resolveDirect(list) {
+    await sharedFetch(list.map((r) => `${r.platform}/${r.id}`)); // primero, lo que otros visitantes ya han consultado
     const cache = goodsLoad();
     const items = [];
     let limited = false;
@@ -874,6 +922,7 @@ const Accounts = (() => {
       const v = await fetchGoodsDirect(r.platform, r.id);
       if (v.status === 'limited') limited = true;
       if (v.status === 'ok' || v.status === 'gone') { cache.set(k, { ts: Date.now(), v }); goodsSave(); }
+      contribute(k, v);
       items.push({ k, ...v, status: v.status === 'limited' || v.status === 'error' ? 'pending' : v.status });
       await sleep(600);
     }
@@ -923,6 +972,14 @@ const Accounts = (() => {
         const hit = r && cache.get(`${r.platform}/${r.id}`);
         return !!hit && Date.now() - hit.ts < GOODS_TTL;
       };
+      // Antes de ir a USFans, se pregunta a la caché compartida por lo que se ve y lo que está justo debajo
+      if (me) {
+        const keys = sorted.filter((c) => !isCached(c)).slice(0, 40).map((c) => {
+          const r = parseProductLink(watching.get(c).link);
+          return r && `${r.platform}/${r.id}`;
+        }).filter(Boolean);
+        if (keys.length) await sharedFetch(keys);
+      }
       const cards = [...sorted.filter(isCached).slice(0, 30), ...sorted.filter((c) => !isCached(c)).slice(0, 3)];
       if (!cards.length || !me) return;
       const batch = cards.map((c) => ({ c, p: watching.get(c), r: parseProductLink(watching.get(c).link) })).filter((x) => x.r);

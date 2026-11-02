@@ -1570,3 +1570,7 @@ body.modal-open { overflow: hidden; }
   .lang-switch.open button[aria-pressed="false"]:hover { background: var(--fill); }
   .brand-logo { height: 20px; }
 }
+
+/* El panel nunca puede ser más ancho que la pantalla, aunque haya muchas categorías o nombres largos (modo expandido) */
+.drawer, .tool, .fold, .filters, .list-head, .source-bar { min-width: 0; }
+.app.expanded .drawer { min-width: 0; max-width: 100%; }
