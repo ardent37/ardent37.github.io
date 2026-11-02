@@ -1513,16 +1513,10 @@ body.modal-open { overflow: hidden; }
 :root:root[data-agent="boonbuy"] { --accent: #ff8a00; --accent-hover: color-mix(in srgb, #ff8a00 86%, #000); --focus: #ff8a00; --menu-hover: #ff8a00; }
 :root:root[data-agent="uidbuy"] { --accent: #186ef9; --accent-hover: color-mix(in srgb, #186ef9 86%, #000); --focus: #186ef9; --menu-hover: #186ef9; }
 
-/* Logo: una sola silueta que toma el color de acento del agente elegido */
-.brand-logo {
-  display: block;
-  width: 142px;
-  height: 20px;
-  background: var(--accent);
-  -webkit-mask: url(/logo.svg) no-repeat left center / contain;
-  mask: url(/logo.svg) no-repeat left center / contain;
-  transition: background-color .3s;
-}
+/* Logo: "cnside" toma el color de acento del agente elegido y ".app" se queda en gris */
+.brand-logo { display: block; height: 22px; width: auto; overflow: visible; }
+.brand-logo .logo-name { fill: var(--accent); transition: fill .3s; }
+.brand-logo .logo-ext { fill: #bdbdbd; }
 #offerBtn[hidden] { display: none !important; }
 
 /* Selector de agente: mismo radio que el cuadro del selector de idiomas, con el icono de cada agente */
@@ -1574,5 +1568,5 @@ body.modal-open { overflow: hidden; }
     color: var(--ink);
   }
   .lang-switch.open button[aria-pressed="false"]:hover { background: var(--fill); }
-  .brand-logo { width: 124px; height: 18px; }
+  .brand-logo { height: 20px; }
 }
