@@ -465,11 +465,6 @@ function agentUrl(link) {
   return (r && agentProductUrl(r)) || withRef(link);
 }
 
-// Enlace para tocar en el móvil: el que abre la app del agente si lo tiene; si no, el normal
-function agentOpenUrl(link) {
-  const r = AGENTS[agentId].app && parseProductLink(link);
-  return (r && AGENTS[agentId].app(r)) || agentUrl(link);
-}
 // iPhone: intenta abrir la app con su esquema; si en ~2 s la página sigue a la vista (no hay app), carga la web.
 // Devuelve true si ha tomado el control del toque.
 const isIos = () => /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -480,14 +475,36 @@ function openIosApp(link) {
   if (!scheme) return false;
   const web = agentUrl(link);
   let left = false;
+  const t0 = Date.now();
   const mark = () => { left = true; };
   document.addEventListener('visibilitychange', mark, { once: true });
   window.addEventListener('pagehide', mark, { once: true });
   window.location.href = scheme;
-  setTimeout(() => { if (!left && !document.hidden) window.location.href = web; }, 2200);
+  setTimeout(() => { if (!left && !document.hidden && Date.now() - t0 < 3500) window.location.href = web; }, 2200);
   return true;
 }
-const cardHref = (link) => (isMobile() ? agentOpenUrl(link) : agentUrl(link));
+// Abre la app del agente sin dejar pestañas por el camino. Devuelve true si ha tomado el control del toque.
+function launchApp(link) {
+  if (openIosApp(link)) return true;
+  const a = AGENTS[agentId];
+  const r = a.app && parseProductLink(link);
+  const url = r && a.app(r);
+  if (!url) return false;
+  if (url.startsWith('intent:')) { window.location.href = url; return true; } // Android: sin pestaña nueva
+  const w = window.open(url, '_blank'); // servicio de enlaces: la pestaña auxiliar se cierra al volver
+  if (!w) return false;
+  let away = false;
+  const back = () => {
+    if (document.visibilityState === 'hidden') { away = true; return; }
+    if (!away) return;
+    try { w.close(); } catch { /* nada */ }
+    document.removeEventListener('visibilitychange', back);
+  };
+  document.addEventListener('visibilitychange', back);
+  setTimeout(() => document.removeEventListener('visibilitychange', back), 600000);
+  return true;
+}
+const cardHref = (link) => agentUrl(link);
 
 function parsePrice(raw) {
   const m = String(raw ?? '').replace(',', '.').match(/\d+(\.\d+)?/);
@@ -1131,7 +1148,7 @@ function productMenu(p) {
   const url = agentUrl(p.link);
   if (isMobile()) {
     return [
-      { icon: '↗', label: t('openInApp', { agent: AGENTS[agentId].name }), action: () => { if (!openIosApp(p.link)) openInApp(agentOpenUrl(p.link)); } },
+      { icon: '↗', label: t('openInApp', { agent: AGENTS[agentId].name }), action: () => { if (!launchApp(p.link)) openInApp(agentUrl(p.link)); } },
       { icon: '⎘', label: t('copyLink'), action: () => navigator.clipboard?.writeText(url) },
       '-',
       ...(CONFIG.accountApi ? [{ icon: '＋', label: t('addToHaul'), action: () => window.Hauls?.addMenu(p) }] : []),
@@ -1177,7 +1194,7 @@ function openInApp(url) {
 function openProduct(p, { newTab = false, focus = false } = {}) {
   const url = agentUrl(p.link);
   if (isMobile()) {
-    if (!openIosApp(p.link)) openInApp(agentOpenUrl(p.link));
+    if (!launchApp(p.link)) openInApp(agentUrl(p.link));
     if (typeof window.gtag === 'function') window.gtag('event', 'product_click', { item_name: p.name, app: true });
     return;
   }
@@ -1202,7 +1219,7 @@ function onProductClick(e) {
   const p = productFrom(e);
   if (!p || e.button !== 0) return;
   if (isMobile()) { // el enlace de la tarjeta se abre solo (en la app si está instalada); en iPhone con BoonBuy lo gestionamos nosotros
-    if (openIosApp(p.link)) e.preventDefault();
+    if (launchApp(p.link)) e.preventDefault();
     return;
   }
   e.preventDefault();
