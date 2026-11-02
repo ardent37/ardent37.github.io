@@ -5,6 +5,9 @@ const CONFIG = {
   brand: 'Salty',
   refCode: 'GRAS35',
   turnstileKey: '0x4AAAAAAFwlhM3bSHPedS_a',   // clave pública de Cloudflare Turnstile (comprobación anti-robots del registro)
+  // Importar spreadsheets de otras personas: DESACTIVADO (todo el código sigue ahí). Para volver a activarlo basta poner true.
+  // Último commit con la función activa: etiqueta git «import-enabled».
+  importEnabled: false,
 
   // URL del CSV publicado de Google Sheets
   // (Archivo → Compartir → Publicar en la Web → pestaña de productos → CSV).

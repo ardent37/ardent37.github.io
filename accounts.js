@@ -427,7 +427,8 @@ const Accounts = (() => {
   const STACK = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 4 3.5 8.5 12 13l8.5-4.5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="m3.5 12.5 8.5 4.5 8.5-4.5M3.5 16.5 12 21l8.5-4.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/></svg>';
   const TICK = '<svg class="tick" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-  const sheets = () => (me ? me.imports.filter((i) => i.resolved) : []);
+  const IMPORT_ON = CONFIG.importEnabled !== false; // ver CONFIG.importEnabled en app.js
+  const sheets = () => (IMPORT_ON && me ? me.imports.filter((i) => i.resolved) : []);
 
   // Pestañas de la hoja elegida (o de todas): son las "categorías" cuando se ven productos importados
   function tabNames(source) {
@@ -519,6 +520,7 @@ const Accounts = (() => {
   });
 
   async function loadCatalogs() {
+    if (!IMPORT_ON) { setImported([]); paintAccount(); return; } // importación desactivada: no se cargan hojas importadas
     const byLink = new Map();
     for (const imp of me.imports) {
       if (!imp.resolved) continue;
@@ -574,7 +576,7 @@ const Accounts = (() => {
     openModal(
       closeBtn(),
       ...heading(t('accTitle'), me.email),
-      el('h3', { class: 'modal-h3', text: t('accImports') }), list, err,
+      ...(IMPORT_ON ? [el('h3', { class: 'modal-h3', text: t('accImports') }), list] : []), err,
       el('div', { class: 'modal-row spread' },
         el('button', { class: 'btn ghost', type: 'button', text: t('accSignOut'), onclick: signOut }),
         twice(t('accDelete'), async () => {
@@ -1091,7 +1093,7 @@ const Accounts = (() => {
   function start() {
     if (!API) return;
     $('accountBtn').hidden = false;
-    $('sourceBar').hidden = false;
+    $('sourceBar').hidden = !IMPORT_ON; // la barra solo contiene el selector de hojas y el botón de importar
     renderSource();
     $('sourceBtn').onclick = (e) => {
       e.stopPropagation();
