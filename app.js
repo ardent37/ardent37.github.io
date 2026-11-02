@@ -395,6 +395,9 @@ const AGENTS = {
     home: 'https://oopbuy.com/?inviteCode=CPE081W7R',
     host: 'oopbuy.com',
     product: (r) => (r.encrypted ? null : `https://oopbuy.com/product/${{ 2: '1', 3: 'weidian', 1: '0' }[r.platform]}/${r.id}?originKeywordUrl=${encodeURIComponent(encodeURIComponent(originalUrl(r)))}&inviteCode=CPE081W7R`),
+    // Enlace que abre la app (servicio allapp.link: abre OopBuy si está instalada y si no, Google Play / App Store)
+    app: (r) => (r.encrypted || !{ 2: 'TAOBAO', 3: 'WEIDIAN' }[r.platform] ? null
+      : `https://oopbuy.allapp.link/XGKJ/1ZX7wX?utm_source=h5&utm_campaign=open+app&utm_content=open+app&LinkType=0&url=${encodeURIComponent(`/pages/goods/details?channel=${{ 2: 'TAOBAO', 3: 'WEIDIAN' }[r.platform]}&id=${r.id}&inviteCode=CPE081W7R&sourceChannel=35&sourceKey=24`)}`),
   },
   boonbuy: {
     name: 'BoonBuy',
@@ -455,6 +458,13 @@ function agentUrl(link) {
   const r = parseProductLink(link);
   return (r && agentProductUrl(r)) || withRef(link);
 }
+
+// Enlace para tocar en el móvil: el que abre la app del agente si lo tiene; si no, el normal
+function agentOpenUrl(link) {
+  const r = AGENTS[agentId].app && parseProductLink(link);
+  return (r && AGENTS[agentId].app(r)) || agentUrl(link);
+}
+const cardHref = (link) => (isMobile() ? agentOpenUrl(link) : agentUrl(link));
 
 function parsePrice(raw) {
   const m = String(raw ?? '').replace(',', '.').match(/\d+(\.\d+)?/);
@@ -695,7 +705,7 @@ function renderCount() {
 function cardFor(p) {
   const a = document.createElement('a');
   a.className = 'card' + (p.id === state.activeId ? ' active' : '');
-  a.href = agentUrl(p.link);
+  a.href = cardHref(p.link);
   a.target = '_blank';
   a.rel = 'noopener';
   a.dataset.id = p.id;
@@ -1098,7 +1108,7 @@ function productMenu(p) {
   const url = agentUrl(p.link);
   if (isMobile()) {
     return [
-      { icon: '↗', label: t('openInApp').replace('{agent}', AGENTS[agentId].name), action: () => openInApp(url) },
+      { icon: '↗', label: t('openInApp').replace('{agent}', AGENTS[agentId].name), action: () => openInApp(agentOpenUrl(p.link)) },
       { icon: '⎘', label: t('copyLink'), action: () => navigator.clipboard?.writeText(url) },
       '-',
       ...(CONFIG.accountApi ? [{ icon: '＋', label: t('addToHaul'), action: () => window.Hauls?.addMenu(p) }] : []),
@@ -1144,7 +1154,7 @@ function openInApp(url) {
 function openProduct(p, { newTab = false, focus = false } = {}) {
   const url = agentUrl(p.link);
   if (isMobile()) {
-    openInApp(url);
+    openInApp(agentOpenUrl(p.link));
     if (typeof window.gtag === 'function') window.gtag('event', 'product_click', { item_name: p.name, app: true });
     return;
   }
@@ -1871,7 +1881,7 @@ function switchAgent(id) {
   // Los enlaces de las tarjetas que ya están en pantalla pasan al agente nuevo
   els.grid.querySelectorAll('a.card').forEach((a) => {
     const p = productFrom({ target: a });
-    if (p) a.href = agentUrl(p.link);
+    if (p) a.href = cardHref(p.link);
   });
   renderTabs();
 }
