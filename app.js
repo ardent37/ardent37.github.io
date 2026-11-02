@@ -404,6 +404,9 @@ const AGENTS = {
     home: 'https://boonbuy.com/?inviteCode=OOVLUHLZI',
     host: 'boonbuy.com',
     product: (r) => (r.encrypted ? null : `https://boonbuy.com/product/${{ 2: '1', 3: 'weidian', 1: '0' }[r.platform]}/${r.id}?inviteCode=OOVLUHLZI`),
+    // Enlace que abre la app (solo Android: BoonBuy usa un intent:// de Chrome; si no está instalada, va a Google Play)
+    app: (r) => (r.encrypted || !/Android/i.test(navigator.userAgent) || !{ 2: '1', 3: 'weidian' }[r.platform] ? null
+      : `intent://open/share/pages/goods/details?spuNo=${r.id}&channelId=${{ 2: '1', 3: 'weidian' }[r.platform]}&inviteCode=OOVLUHLZI#Intent;scheme=boonbuyapp;package=com.boonbuy.boonbuy;S.browser_fallback_url=${encodeURIComponent('https://play.google.com/store/apps/details?id=com.boonbuy.boonbuy')};end`),
   },
   uidbuy: {
     name: 'UIDBuy',
