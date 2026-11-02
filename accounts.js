@@ -981,7 +981,7 @@ const Accounts = (() => {
       else lazy.queue.delete(e.target);
     }
     pump(0);
-  }, { rootMargin: '600px 0px' }); // se adelanta lo que está justo debajo; lo visible tiene prioridad (ver pump)
+  }, { rootMargin: '300px 0px 2400px 0px' }); // se adelanta lo que viene debajo (unas 3-4 pantallas); lo visible tiene prioridad (ver pump)
 
   function watch(card, p) {
     if (!API || p.done) return;
@@ -999,7 +999,7 @@ const Accounts = (() => {
       const rank = (c) => {
         const r = c.getBoundingClientRect();
         const visible = r.bottom > 0 && r.top < H;
-        return (visible ? 0 : 1e6) + Math.abs(r.top) + (watching.get(c).image ? 5e5 : 0);
+        return (visible ? 0 : 1e6) + (r.top > 0 ? r.top : -r.top * 4) + (watching.get(c).image ? 5e5 : 0);
       };
       const sorted = [...lazy.queue].sort((a, b) => rank(a) - rank(b));
       // Lo que ya está en la caché de este navegador se pinta de golpe; a la red van pocos cada vez
@@ -1053,7 +1053,7 @@ const Accounts = (() => {
         } // 'pending' (USFans limitando o error de red): se reintentará más tarde sin contar como intento
         if (p.done) { lazy.queue.delete(c); watching.delete(c); seenIo.unobserve(c); }
       });
-      pump(lazy.backoff || (res.network ? 1000 : 40));
+      pump(lazy.backoff || (res.network ? 250 : 40));
     }, delay);
   }
 
