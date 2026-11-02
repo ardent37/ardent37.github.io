@@ -404,6 +404,9 @@ const AGENTS = {
     home: 'https://boonbuy.com/?inviteCode=OOVLUHLZI',
     host: 'boonbuy.com',
     product: (r) => (r.encrypted ? null : `https://boonbuy.com/product/${{ 2: '1', 3: 'weidian', 1: '0' }[r.platform]}/${r.id}?inviteCode=OOVLUHLZI`),
+    // iPhone: esquema propio; si la app no responde, se carga la web (ver openIosApp)
+    iosApp: (r) => (r.encrypted || !{ 2: '1', 3: 'weidian' }[r.platform] ? null
+      : `boonbuyapp://open/share/pages/goods/details?spuNo=${r.id}&channelId=${{ 2: '1', 3: 'weidian' }[r.platform]}&inviteCode=OOVLUHLZI`),
     // Enlace que abre la app (solo Android: BoonBuy usa un intent:// de Chrome; si no está instalada, va a Google Play)
     app: (r) => (r.encrypted || !/Android/i.test(navigator.userAgent) || !{ 2: '1', 3: 'weidian' }[r.platform] ? null
       : `intent://open/share/pages/goods/details?spuNo=${r.id}&channelId=${{ 2: '1', 3: 'weidian' }[r.platform]}&inviteCode=OOVLUHLZI#Intent;scheme=boonbuyapp;package=com.boonbuy.boonbuy;S.browser_fallback_url=${encodeURIComponent('https://play.google.com/store/apps/details?id=com.boonbuy.boonbuy')};end`),
@@ -466,6 +469,23 @@ function agentUrl(link) {
 function agentOpenUrl(link) {
   const r = AGENTS[agentId].app && parseProductLink(link);
   return (r && AGENTS[agentId].app(r)) || agentUrl(link);
+}
+// iPhone: intenta abrir la app con su esquema; si en ~2 s la página sigue a la vista (no hay app), carga la web.
+// Devuelve true si ha tomado el control del toque.
+const isIos = () => /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function openIosApp(link) {
+  const a = AGENTS[agentId];
+  const r = isIos() && a.iosApp && parseProductLink(link);
+  const scheme = r && a.iosApp(r);
+  if (!scheme) return false;
+  const web = agentUrl(link);
+  let left = false;
+  const mark = () => { left = true; };
+  document.addEventListener('visibilitychange', mark, { once: true });
+  window.addEventListener('pagehide', mark, { once: true });
+  window.location.href = scheme;
+  setTimeout(() => { if (!left && !document.hidden) window.location.href = web; }, 2200);
+  return true;
 }
 const cardHref = (link) => (isMobile() ? agentOpenUrl(link) : agentUrl(link));
 
@@ -1111,7 +1131,7 @@ function productMenu(p) {
   const url = agentUrl(p.link);
   if (isMobile()) {
     return [
-      { icon: '↗', label: t('openInApp', { agent: AGENTS[agentId].name }), action: () => openInApp(agentOpenUrl(p.link)) },
+      { icon: '↗', label: t('openInApp', { agent: AGENTS[agentId].name }), action: () => { if (!openIosApp(p.link)) openInApp(agentOpenUrl(p.link)); } },
       { icon: '⎘', label: t('copyLink'), action: () => navigator.clipboard?.writeText(url) },
       '-',
       ...(CONFIG.accountApi ? [{ icon: '＋', label: t('addToHaul'), action: () => window.Hauls?.addMenu(p) }] : []),
@@ -1157,7 +1177,7 @@ function openInApp(url) {
 function openProduct(p, { newTab = false, focus = false } = {}) {
   const url = agentUrl(p.link);
   if (isMobile()) {
-    openInApp(agentOpenUrl(p.link));
+    if (!openIosApp(p.link)) openInApp(agentOpenUrl(p.link));
     if (typeof window.gtag === 'function') window.gtag('event', 'product_click', { item_name: p.name, app: true });
     return;
   }
@@ -1181,7 +1201,10 @@ const productFrom = (e) => {
 function onProductClick(e) {
   const p = productFrom(e);
   if (!p || e.button !== 0) return;
-  if (isMobile()) return; // el enlace de la tarjeta se abre solo (en la app de USFans si está instalada)
+  if (isMobile()) { // el enlace de la tarjeta se abre solo (en la app si está instalada); en iPhone con BoonBuy lo gestionamos nosotros
+    if (openIosApp(p.link)) e.preventDefault();
+    return;
+  }
   e.preventDefault();
   openProduct(p, { newTab: e.ctrlKey || e.metaKey || e.shiftKey });
 }
