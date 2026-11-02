@@ -1713,7 +1713,7 @@ function rerenderQc() {
 // Cabecera de la página en el idioma activo. Cada idioma tiene su dirección (/ y /en/), y el selector
 // cambia los textos al instante y actualiza también la dirección.
 function applySeoMeta() {
-  const url = `https://ardent37.github.io${LANG_PATH[lang]}`;
+  const url = `https://cnside.app${LANG_PATH[lang]}`;
   const set = (sel, attr, val) => document.querySelector(sel)?.setAttribute(attr, val);
   document.title = t('seoTitle');
   set('meta[name="description"]', 'content', t('seoDescription'));

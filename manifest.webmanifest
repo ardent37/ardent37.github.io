@@ -1,6 +1,6 @@
 {
-  "name": "USFans+ Finds",
-  "short_name": "USFans+",
+  "name": "cnside.app",
+  "short_name": "cnside",
   "description": "Busca entre miles de productos y cómpralos con USFans.",
   "start_url": "/",
   "scope": "/",
