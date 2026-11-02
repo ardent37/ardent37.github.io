@@ -4,6 +4,7 @@
 const CONFIG = {
   brand: 'Salty',
   refCode: 'GRAS35',
+  turnstileKey: '0x4AAAAAAFwlhM3bSHPedS_a',   // clave pública de Cloudflare Turnstile (comprobación anti-robots del registro)
 
   // URL del CSV publicado de Google Sheets
   // (Archivo → Compartir → Publicar en la Web → pestaña de productos → CSV).

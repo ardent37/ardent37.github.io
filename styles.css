@@ -1574,3 +1574,6 @@ body.modal-open { overflow: hidden; }
 /* El panel nunca puede ser más ancho que la pantalla, aunque haya muchas categorías o nombres largos (modo expandido) */
 .drawer, .tool, .fold, .filters, .list-head, .source-bar { min-width: 0; }
 .app.expanded .drawer { min-width: 0; max-width: 100%; }
+
+.captcha:empty { display: none; }
+.captcha { display: flex; justify-content: center; }

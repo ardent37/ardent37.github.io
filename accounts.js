@@ -29,6 +29,7 @@ Object.assign(I18N.es, {
   errExpired: 'El código ha caducado. Pide uno nuevo.',
   errGeneric: 'Algo ha fallado. Inténtalo de nuevo.',
   errMail: 'No se pudo enviar el correo. Inténtalo más tarde.',
+  errCaptcha: 'No hemos podido comprobar que eres una persona. Recarga la página e inténtalo de nuevo.',
   errNetwork: 'No se puede conectar con el servidor ahora mismo. Algunas operadoras bloquean temporalmente el servicio durante los partidos de fútbol: prueba de nuevo más tarde o con una VPN.',
   accTitle: 'Tu cuenta',
   accNick: 'Tu apodo en hauls compartidos',
@@ -100,6 +101,7 @@ Object.assign(I18N.en, {
   errExpired: 'The code has expired. Request a new one.',
   errGeneric: 'Something went wrong. Please try again.',
   errMail: 'The email couldn’t be sent. Try again later.',
+  errCaptcha: 'We couldn’t verify you’re human. Reload the page and try again.',
   errNetwork: 'Can’t reach the server right now. Some ISPs temporarily block the service during football matches: try again later or use a VPN.',
   accTitle: 'Your account',
   accNick: 'Your nickname in shared hauls',
@@ -171,6 +173,7 @@ Object.assign(I18N.pl, {
   errExpired: 'Kod wygasł. Poproś o nowy.',
   errGeneric: 'Coś poszło nie tak. Spróbuj ponownie.',
   errMail: 'Nie udało się wysłać e-maila. Spróbuj później.',
+  errCaptcha: 'Nie udało się potwierdzić, że jesteś człowiekiem. Odśwież stronę i spróbuj ponownie.',
   errNetwork: 'Nie można teraz połączyć się z serwerem. Niektórzy operatorzy w Hiszpanii czasowo blokują usługę podczas meczów piłkarskich: spróbuj później lub użyj VPN.',
   accTitle: 'Twoje konto',
   accNick: 'Twój pseudonim we wspólnych haulach',
@@ -314,9 +317,41 @@ const Accounts = (() => {
   const showErr = (box, msg) => { box.textContent = msg; box.hidden = !msg; };
   const closeBtn = () => el('button', { class: 'modal-x', type: 'button', 'aria-label': t('importClose'), onclick: closeModal, text: '×' });
 
+  // Cloudflare Turnstile (gratis): comprobación invisible de que quien pide el código es una persona, no un robot
+  let tsLoading = null;
+  function loadTurnstile() {
+    if (window.turnstile) return Promise.resolve(window.turnstile);
+    tsLoading ||= new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      s.async = true;
+      s.onload = () => resolve(window.turnstile);
+      s.onerror = () => { tsLoading = null; reject(Object.assign(new Error('network'), { code: 'network' })); };
+      document.head.appendChild(s);
+    });
+    return tsLoading;
+  }
+
+  async function captchaToken(box) {
+    const sitekey = CONFIG.turnstileKey;
+    if (!sitekey) return '';
+    let ts;
+    try { ts = await loadTurnstile(); } catch { return ''; } // si no carga, lo decide el servidor
+    return new Promise((resolve) => {
+      box.replaceChildren();
+      const timer = setTimeout(() => resolve(''), 25000);
+      ts.render(box, {
+        sitekey,
+        appearance: 'interaction-only', // solo se ve si hace falta que la persona confirme algo
+        callback: (tk) => { clearTimeout(timer); resolve(tk); },
+        'error-callback': () => { clearTimeout(timer); resolve(''); },
+      });
+    });
+  }
+
   const authError = (e) => ({
     bad_email: t('errBadEmail'), wait: t('errWait'), too_many: t('errTooMany'), bad_code: t('errBadCode'),
-    expired: t('errExpired'), mail_failed: t('errMail'), network: t('errNetwork'),
+    expired: t('errExpired'), mail_failed: t('errMail'), network: t('errNetwork'), captcha: t('errCaptcha'),
   }[e.code] || t('errGeneric'));
 
   /* ---------- Inicio de sesión ---------- */
@@ -326,17 +361,18 @@ const Accounts = (() => {
     const email = el('input', { type: 'email', inputmode: 'email', autocomplete: 'email', placeholder: t('loginEmail'), 'aria-label': t('loginEmail'), required: true });
     const marketing = el('input', { type: 'checkbox' });
     const send = el('button', { class: 'btn modal-btn', type: 'submit', text: t('loginSend') });
+    const captcha = el('div', { class: 'captcha' });
     const form = el('form', { class: 'modal-form', novalidate: true },
       el('div', { class: 'field' }, email),
       el('label', { class: 'check' }, marketing, el('span', { text: t('loginMarketing') })),
-      err, send,
+      captcha, err, send,
       el('p', { class: 'modal-note', text: t('loginPrivacy') }));
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       showErr(err, '');
       send.disabled = true;
       try {
-        const r = await call('/auth/request', { method: 'POST', body: { email: email.value, marketing: marketing.checked } });
+        const r = await call('/auth/request', { method: 'POST', body: { email: email.value, marketing: marketing.checked, captcha: await captchaToken(captcha) } });
         codeStep(email.value.trim().toLowerCase(), marketing.checked, r.devCode, after);
       } catch (ex) {
         showErr(err, authError(ex));
@@ -352,14 +388,15 @@ const Accounts = (() => {
     const verify = el('button', { class: 'btn modal-btn', type: 'submit', text: t('loginVerify') });
     const resend = el('button', { class: 'btn ghost', type: 'button', text: t('loginResend') });
     const back = el('button', { class: 'btn ghost', type: 'button', text: t('loginBack'), onclick: () => loginModal(after) });
+    const captcha = el('div', { class: 'captcha' });
     const form = el('form', { class: 'modal-form', novalidate: true },
       el('div', { class: 'field' }, code),
       devCode ? el('p', { class: 'modal-note dev', text: t('loginDevCode', { code: devCode }) }) : null,
-      err, verify, el('div', { class: 'modal-row' }, resend, back));
+      captcha, err, verify, el('div', { class: 'modal-row' }, resend, back));
     resend.onclick = async () => {
       showErr(err, '');
       try {
-        const r = await call('/auth/request', { method: 'POST', body: { email: emailValue, marketing: marketingValue } });
+        const r = await call('/auth/request', { method: 'POST', body: { email: emailValue, marketing: marketingValue, captcha: await captchaToken(captcha) } });
         codeStep(emailValue, marketingValue, r.devCode, after);
       } catch (ex) { showErr(err, authError(ex)); }
     };
