@@ -365,6 +365,7 @@ button { -webkit-tap-highlight-color: transparent; }
 .price-btn {
   position: relative;
   flex: none;
+  margin-left: auto; /* en escritorio la fila reparte el espacio: así el icono queda pegado al orden */
   display: grid;
   place-items: center;
   width: 30px;
