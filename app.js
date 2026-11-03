@@ -66,6 +66,10 @@ const I18N = {
     sortDefault: 'Destacados',
     sortPriceAsc: 'Precio ↑',
     sortPriceDesc: 'Precio ↓',
+    priceFilter: 'Filtrar por precio',
+    priceMin: 'Mínimo',
+    priceMax: 'Máximo',
+    priceReset: 'Quitar filtro',
     sortName: 'Nombre A–Z',
     loading: 'Cargando productos…',
     count: '{n} productos',
@@ -162,6 +166,10 @@ const I18N = {
     sortDefault: 'Featured',
     sortPriceAsc: 'Price ↑',
     sortPriceDesc: 'Price ↓',
+    priceFilter: 'Filter by price',
+    priceMin: 'Minimum',
+    priceMax: 'Maximum',
+    priceReset: 'Clear filter',
     sortName: 'Name A–Z',
     loading: 'Loading products…',
     count: '{n} products',
@@ -258,6 +266,10 @@ const I18N = {
     sortDefault: 'Polecane',
     sortPriceAsc: 'Cena ↑',
     sortPriceDesc: 'Cena ↓',
+    priceFilter: 'Filtruj według ceny',
+    priceMin: 'Minimum',
+    priceMax: 'Maksimum',
+    priceReset: 'Wyczyść filtr',
     sortName: 'Nazwa A–Z',
     loading: 'Wczytywanie produktów…',
     count: '{n} produktów',
@@ -674,6 +686,124 @@ function linkLookup(text, onUpdate) {
   return p;
 }
 
+/* ---------- Filtro por rango de precio ---------- */
+// state.priceMin / state.priceMax (en euros); null = sin límite por ese lado
+const priceActive = () => state.priceMin != null || state.priceMax != null;
+const priceOk = (p) => !priceActive() || (!isNaN(p.price)
+  && (state.priceMin == null || p.price >= state.priceMin)
+  && (state.priceMax == null || p.price <= state.priceMax));
+
+function setupPrice() {
+  const btn = $('priceBtn');
+  if (!btn) return;
+  let pop = null;
+  let quiet = 0; // justo después de filtrar la lista vuelve arriba: ese scroll no debe cerrar la ventana
+  let timer = 0;
+
+  const bounds = () => {
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (const p of state.all) {
+      if (p.gone || isNaN(p.price)) continue;
+      if (p.price < lo) lo = p.price;
+      if (p.price > hi) hi = p.price;
+    }
+    if (lo === Infinity) return { lo: 0, hi: 100 };
+    lo = Math.floor(lo);
+    hi = Math.ceil(hi);
+    return { lo, hi: hi > lo ? hi : lo + 1 };
+  };
+
+  const paint = () => btn.classList.toggle('on', priceActive());
+  const run = (soon) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => { quiet = Date.now() + 500; applyFilters(); }, soon ? 0 : 140);
+  };
+
+  function close() {
+    if (!pop) return;
+    pop.remove();
+    pop = null;
+    btn.setAttribute('aria-expanded', 'false');
+    document.removeEventListener('pointerdown', away, true);
+    document.removeEventListener('keydown', esc);
+    window.removeEventListener('resize', close);
+    els.list.removeEventListener('scroll', onScroll);
+  }
+  function away(e) { if (pop && !pop.contains(e.target) && !btn.contains(e.target)) close(); }
+  function esc(e) { if (e.key === 'Escape') close(); }
+  function onScroll() { if (Date.now() > quiet) close(); }
+
+  function open() {
+    const { lo, hi } = bounds();
+    pop = document.createElement('div');
+    pop.className = 'price-pop';
+    pop.setAttribute('role', 'dialog');
+    pop.setAttribute('aria-label', t('priceFilter'));
+    pop.innerHTML = '<div class="price-head"><strong></strong><button type="button" class="price-reset"></button></div>'
+      + '<div class="price-vals"><label><span class="l-min"></span><input type="number" inputmode="numeric" class="n-min" step="1"></label>'
+      + '<i></i><label><span class="l-max"></span><input type="number" inputmode="numeric" class="n-max" step="1"></label></div>'
+      + '<div class="price-slider"><div class="price-track"><div class="price-fill"></div></div>'
+      + '<input type="range" class="r-min" step="1"><input type="range" class="r-max" step="1"></div>';
+    const q = (s) => pop.querySelector(s);
+    q('strong').textContent = t('priceFilter');
+    q('.price-reset').textContent = t('priceReset');
+    q('.l-min').textContent = `${t('priceMin')} (€)`;
+    q('.l-max').textContent = `${t('priceMax')} (€)`;
+    const rMin = q('.r-min');
+    const rMax = q('.r-max');
+    const nMin = q('.n-min');
+    const nMax = q('.n-max');
+    for (const r of [rMin, rMax]) { r.min = lo; r.max = hi; }
+    for (const n of [nMin, nMax]) { n.min = lo; n.max = hi; }
+
+    let a = Math.min(Math.max(state.priceMin ?? lo, lo), hi);
+    let b = Math.max(Math.min(state.priceMax ?? hi, hi), lo);
+    if (a > b) [a, b] = [b, a];
+
+    const show = () => {
+      rMin.value = a;
+      rMax.value = b;
+      nMin.value = a;
+      nMax.value = b;
+      const fill = q('.price-fill');
+      fill.style.left = `${((a - lo) / (hi - lo)) * 100}%`;
+      fill.style.right = `${100 - ((b - lo) / (hi - lo)) * 100}%`;
+      rMin.style.zIndex = a > (lo + hi) / 2 ? 3 : 1; // si los dos coinciden arriba, se puede seguir moviendo el mínimo
+      rMax.style.zIndex = 2;
+      q('.price-reset').disabled = a <= lo && b >= hi;
+    };
+    const commit = () => {
+      state.priceMin = a > lo ? a : null;
+      state.priceMax = b < hi ? b : null;
+      paint();
+      show();
+      run();
+    };
+    const num = (v, d) => (Number.isFinite(v) ? Math.round(v) : d);
+    rMin.oninput = () => { a = Math.min(num(+rMin.value, lo), b); commit(); };
+    rMax.oninput = () => { b = Math.max(num(+rMax.value, hi), a); commit(); };
+    nMin.onchange = () => { a = Math.min(Math.max(num(+nMin.value, lo), lo), b); commit(); };
+    nMax.onchange = () => { b = Math.max(Math.min(num(+nMax.value, hi), hi), a); commit(); };
+    q('.price-reset').onclick = () => { a = lo; b = hi; commit(); run(true); };
+    show();
+
+    document.body.appendChild(pop);
+    const r = btn.getBoundingClientRect();
+    const w = pop.offsetWidth;
+    pop.style.left = `${Math.max(8, Math.min(r.right - w + 8, innerWidth - w - 8))}px`;
+    pop.style.top = `${r.bottom + 8}px`;
+    btn.setAttribute('aria-expanded', 'true');
+    document.addEventListener('pointerdown', away, true);
+    document.addEventListener('keydown', esc);
+    window.addEventListener('resize', close);
+    els.list.addEventListener('scroll', onScroll, { passive: true });
+  }
+
+  btn.onclick = () => (pop ? close() : open());
+  paint();
+}
+
 function applyFilters() {
   const linked = linkLookup(state.query, () => { if (linkRefOf(state.query)) applyFilters(); });
   if (linked) {
@@ -694,7 +824,8 @@ function applyFilters() {
     inSource(p) &&
     (!state.tab || tabMatch(p)) &&
     (!state.category || p.categories.includes(state.category)) &&
-    tokens.every((t) => p._n.includes(t)));
+    tokens.every((t) => p._n.includes(t)) &&
+    priceOk(p));
 
   const byPrice = (a, b) => (isNaN(a.price) ? Infinity : a.price) - (isNaN(b.price) ? Infinity : b.price);
   if (state.sort === 'price-asc') list = list.slice().sort(byPrice);
@@ -2078,6 +2209,7 @@ async function init() {
     searchTimer = setTimeout(() => { state.query = els.search.value; applyFilters(); }, 120);
   });
   els.sort.onchange = () => { state.sort = els.sort.value; applyFilters(); };
+  setupPrice();
 
   new IntersectionObserver((entries) => {
     if (entries[0].isIntersecting) renderMore();
