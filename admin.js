@@ -118,6 +118,11 @@ const Admin = (() => {
   /* ---------- Análisis: mantenimiento y tráfico ---------- */
   const num = (n) => Number(n || 0).toLocaleString('es-ES');
   const size = (b) => (b >= 1024 ** 3 ? `${(b / 1024 ** 3).toFixed(2)} GB` : `${(b / 1024 ** 2).toFixed(b < 10 * 1024 ** 2 ? 2 : 1)} MB`);
+  const countryName = (code) => {
+    if (!code || code === '??' || code === 'XX') return 'Desconocido';
+    if (code === 'T1') return 'Red Tor';
+    try { return new Intl.DisplayNames(['es'], { type: 'region' }).of(code) || code; } catch { return code; }
+  };
   const RANGES = [['all', 'Siempre'], ['30d', '30 días'], ['7d', '7 días'], ['24h', '24 horas']];
   const RANGE_NAME = { all: 'desde siempre', '30d': 'últimos 30 días', '7d': 'últimos 7 días', '24h': 'últimas 24 horas' };
 
@@ -174,7 +179,7 @@ const Admin = (() => {
         ? [...d.countries.filter((x) => x.code !== '??' && x.code !== 'XX'), { code: 'XX', visits: unk.reduce((s, x) => s + x.visits, 0) }].sort((a, b) => b.visits - a.visits)
         : d.countries;
       const total = all.reduce((s, x) => s + x.visits, 0);
-      const nameOf = (code) => (code === '??' || code === 'XX' ? 'Desconocido' : code === 'T1' ? 'Red Tor' : (() => { try { return new Intl.DisplayNames(['es'], { type: 'region' }).of(code) || code; } catch { return code; } })());
+      const nameOf = countryName;
       const top = all.slice(0, 8);
       const rest = all.slice(8).reduce((s, x) => s + x.visits, 0);
       const list = rest ? [...top, { code: '', visits: rest, label: 'Otros' }] : top;
@@ -243,7 +248,7 @@ const Admin = (() => {
       const r = await api(`/admin/stats/users?range=${range}`);
       list.replaceChildren(...(r.items.length ? r.items.map((u) => el('li', {},
         el('span', { class: 'acc-name' }, el('b', { text: u.email }),
-          el('small', { text: `${new Date(u.created_at).toLocaleDateString('es-ES')}${u.marketing ? ' · acepta novedades' : ''}` }))))
+          el('small', { text: `${new Date(u.created_at).toLocaleDateString('es-ES')} · ${u.country ? countryName(u.country) : 'país sin registrar'}${u.marketing ? ' · acepta novedades' : ''}` }))))
         : [el('li', { class: 'acc-empty', text: 'Nadie en este periodo.' })]));
       copy.hidden = !r.items.length;
       copy.onclick = async () => {
