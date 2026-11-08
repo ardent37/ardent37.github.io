@@ -1166,6 +1166,26 @@ a.qc-thumb { display: block; cursor: zoom-in; }
 .check { display: flex; align-items: flex-start; gap: 10px; color: var(--ink-2); font-size: 14px; cursor: pointer; }
 .check input { flex: none; width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--accent); }
 .btn.ghost.danger { color: #e5484d; }
+.adm-box { margin-top: 4px; }
+.adm-actions { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.adm-link { display: flex; gap: 8px; align-items: stretch; }
+.adm-link .field { flex: 1; min-width: 0; }
+.adm-body[hidden] { display: none; }
+.adm-body { display: flex; flex-direction: column; gap: 10px; }
+.adm-prev { display: flex; justify-content: center; }
+.adm-prev img { max-width: 100%; max-height: 190px; border-radius: 12px; background: var(--fill); object-fit: contain; }
+.adm-strip { display: flex; flex-wrap: wrap; gap: 6px; }
+.adm-th { width: 52px; height: 52px; padding: 0; border: 2px solid transparent; border-radius: 10px; overflow: hidden; background: var(--fill); cursor: pointer; }
+.adm-th.on { border-color: var(--accent); }
+.adm-th img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.adm-photo { display: flex; gap: 8px; align-items: center; }
+.adm-photo .adm-url, .adm-photo input[type="text"] { flex: 1; min-width: 0; height: 38px; padding: 0 12px; border: 0; border-radius: 10px; background: var(--fill); color: var(--ink); font-size: 14px; }
+.adm-upload { flex: none; display: inline-flex; align-items: center; height: 38px; padding: 0 12px; border-radius: 10px; background: var(--fill); color: var(--accent); font-size: 13px; cursor: pointer; }
+.adm-upload:hover { background: var(--fill-hover); }
+.adm-file { display: none; }
+.adm-check { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+.adm-sel { height: 38px; padding: 0 10px; border: 0; border-radius: 10px; background: var(--fill); color: var(--ink); font-size: 14px; }
+.adm-toast { position: fixed; left: 50%; bottom: 28px; z-index: 200; max-width: calc(100vw - 32px); padding: 10px 16px; border-radius: 12px; background: var(--ink); color: var(--canvas); font-size: 14px; transform: translateX(-50%); box-shadow: 0 8px 28px rgba(0, 0, 0, .25); animation: pricePop .18s ease-out; }
 .acc-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; }
 .acc-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; }
 .acc-name { min-width: 0; display: flex; flex-direction: column; }

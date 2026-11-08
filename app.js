@@ -613,6 +613,46 @@ function loadCsv(url) {
   });
 }
 
+/* ---------- Productos propios (los añade el administrador y se guardan en la API) ---------- */
+let baseCatalog = [];   // el catálogo tal y como sale de la hoja
+let extraItems = [];    // los productos propios
+
+// Devuelve la lista, o null si no se ha podido leer (para no confundir «sin productos» con «sin conexión»)
+async function fetchExtras({ fresh = false } = {}) {
+  if (!CONFIG.accountApi) return [];
+  try {
+    const r = await fetch(`${CONFIG.accountApi}/products/extra`, fresh ? { cache: 'no-store' } : {});
+    if (!r.ok) return null;
+    const j = await r.json();
+    return Array.isArray(j.items) ? j.items : null;
+  } catch { return null; }
+}
+
+// Los productos propios van primero (así salen los primeros en Novedades y en Todo); si ya estaban en la hoja, mandan los propios
+function mergeExtras(list, items) {
+  const extra = items.map((x) => {
+    const categories = (x.categories || []).map(categoryKey);
+    return {
+      name: x.name, link: x.link, priceRaw: x.price || '', image: x.image || '', categories, sections: [], adminId: x.id,
+      price: parsePrice(x.price),
+      _n: norm(`${x.name} ${categories.map(categoryNames).join(' ')}`),
+    };
+  });
+  const keys = new Set(extra.map((p) => productKeyOf(p.link)));
+  return [...extra, ...list.filter((p) => !keys.has(productKeyOf(p.link)))].map((p, i) => ({ ...p, id: i }));
+}
+
+function applyExtras() {
+  state.orig = mergeExtras(baseCatalog, extraItems);
+  setImported(state.imp || []); // vuelve a juntar las hojas importadas (si las hay) y repinta
+}
+
+async function refreshExtras() {
+  const items = await fetchExtras({ fresh: true });
+  if (items) extraItems = items;
+  applyExtras();
+}
+
 function sampleProducts() {
   const cats = ['Calzado', 'Tops', 'Partes de abajo', 'Ropa de abrigo', 'Accesorios', 'Bolsos', 'Joyería'];
   const words = {
@@ -1287,6 +1327,7 @@ function productMenu(p) {
       '-',
       ...(CONFIG.accountApi ? [{ icon: '＋', label: t('addToHaul'), action: () => window.Hauls?.addMenu(p) }] : []),
       { icon: '◎', label: t('viewQc'), action: () => searchQc(p.link) },
+      ...(window.Admin?.menu(p) || []),
     ];
   }
   return [
@@ -1299,6 +1340,7 @@ function productMenu(p) {
     '-',
     ...(CONFIG.accountApi ? [{ icon: '＋', label: t('addToHaul'), action: () => window.Hauls?.addMenu(p) }] : []),
     { icon: '◎', label: t('viewQc'), action: () => searchQc(p.link) },
+    ...(window.Admin?.menu(p) || []),
   ];
 }
 
@@ -2217,7 +2259,13 @@ async function init() {
 
   renderSkeleton();
   try {
-    state.all = CONFIG.dataUrl ? await loadCsv(CONFIG.dataUrl) : sampleProducts();
+    const extrasP = fetchExtras();
+    baseCatalog = CONFIG.dataUrl ? await loadCsv(CONFIG.dataUrl) : sampleProducts();
+    // Si el servidor tarda (o está bloqueado), la hoja se enseña igual y los productos propios se añaden cuando lleguen
+    const early = await Promise.race([extrasP, new Promise((r) => setTimeout(() => r(null), 2000))]);
+    extraItems = early || [];
+    state.all = mergeExtras(baseCatalog, extraItems);
+    if (!early) extrasP.then((items) => { if (items?.length) { extraItems = items; applyExtras(); } });
   } catch (err) {
     console.error(err);
     els.count.removeAttribute('data-i18n');

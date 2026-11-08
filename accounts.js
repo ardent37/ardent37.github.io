@@ -577,6 +577,7 @@ const Accounts = (() => {
       closeBtn(),
       ...heading(t('accTitle'), me.email),
       ...(IMPORT_ON ? [el('h3', { class: 'modal-h3', text: t('accImports') }), list] : []), err,
+      ...(window.Admin ? window.Admin.accountSection(me) : []),
       el('div', { class: 'modal-row spread' },
         el('button', { class: 'btn ghost', type: 'button', text: t('accSignOut'), onclick: signOut }),
         twice(t('accDelete'), async () => {
