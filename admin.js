@@ -142,6 +142,7 @@ const Admin = (() => {
     const kUsers = el('b', { text: '–' });
     const note = el('p', { class: 'adm-an-note' });
     const countries = el('div', { class: 'adm-ctry' });
+    const agentsBox = el('div', { class: 'adm-ctry' });
     const usersBtn = el('button', { class: 'btn ghost adm-an-mail', type: 'button', text: 'Ver correos', onclick: () => usersModal(range) });
     const kpi = (label, val, extra) => el('div', { class: 'adm-kpi' }, el('span', { class: 'adm-kpi-l', text: label }), val, extra);
 
@@ -161,6 +162,7 @@ const Admin = (() => {
       rows.replaceChildren(
         row('Base de datos', `${size(m.dbBytes)} / ${size(m.dbLimit)}`, m.dbBytes / m.dbLimit),
         row('Visitas registradas hoy', `${num(m.visitsToday)} / ${num(m.visitsDayMax)}`, m.visitsToday / m.visitsDayMax),
+        ...(m.clicksDayMax ? [row('Clics en productos registrados hoy', `${num(m.clicksToday)} / ${num(m.clicksDayMax)}`, m.clicksToday / m.clicksDayMax)] : []),
         row('Productos en la caché compartida (hoy)', `${num(m.goodsToday)} / ${num(m.goodsDayMax)}`, m.goodsToday / m.goodsDayMax),
         row('Correos de acceso enviados (hoy)', `${num(m.codesToday)} / ${num(m.codesDayMax)}`, m.codesToday / m.codesDayMax),
         row('Productos propios', num(m.adminProducts)),
@@ -192,6 +194,21 @@ const Admin = (() => {
           el('span', { class: 'adm-ctry-bg' }, bar),
           el('span', { class: 'adm-ctry-v' }, el('b', { text: num(x.visits) }), ` · ${Math.round((x.visits / total) * 100)} %`));
       }) : [el('p', { class: 'adm-ctry-empty', text: 'Aún no hay visitas en este periodo.' })]));
+      // Agente más utilizado: un agente cuenta cuando alguien abre un producto con la web configurada en él
+      const AGENT_NAME = { usfans: 'USFans', kakobuy: 'KakoBuy', oopbuy: 'OopBuy', boonbuy: 'BoonBuy', uidbuy: 'UIDBuy', otro: 'Otro' };
+      const AGENT_COLOR = { usfans: '#ff4800', boonbuy: '#ff8a00', kakobuy: '#f5222d', oopbuy: '#ff186b', uidbuy: '#186ef9', otro: '#8a8a8f' };
+      const ag = d.agents || [];
+      const agTotal = ag.reduce((s, x) => s + x.clicks, 0);
+      const agMax = Math.max(1, ...ag.map((x) => x.clicks));
+      agentsBox.replaceChildren(...(agTotal ? ag.map((x) => {
+        const bar = el('i');
+        bar.style.setProperty('--w', `${Math.max(2, (x.clicks / agMax) * 100)}%`);
+        bar.style.setProperty('--c', AGENT_COLOR[x.agent] || AGENT_COLOR.otro);
+        return el('div', { class: 'adm-ctry-row' },
+          el('span', { class: 'adm-ctry-n', text: AGENT_NAME[x.agent] || x.agent }),
+          el('span', { class: 'adm-ctry-bg' }, bar),
+          el('span', { class: 'adm-ctry-v' }, el('b', { text: num(x.clicks) }), ` · ${Math.round((x.clicks / agTotal) * 100)} %`));
+      }) : [el('p', { class: 'adm-ctry-empty', text: 'Aún no hay clics en productos en este periodo.' })]));
       const first = d.traffic.first ? new Date(d.traffic.first).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) : null;
       note.textContent = `${first ? `Hay datos de visitas desde el ${first}; antes de eso no se medía. ` : 'Aún no hay visitas registradas. '}`
         + '«Únicos» son personas distintas por día, sumadas: quien vuelve otro día cuenta otra vez. Nadie queda identificado.';
@@ -225,6 +242,7 @@ const Admin = (() => {
         kpi('Visitantes únicos', kUniq),
         kpi('Usuarios registrados', kUsers, usersBtn)),
       el('h4', { class: 'adm-an-sec', text: 'Países de origen (visitas)' }), countries,
+      el('h4', { class: 'adm-an-sec', text: 'Agente más utilizado (clics en productos)' }), agentsBox,
       note);
 
     // Se pide al activar el modo administrador (así ya está listo al abrir la pestaña) y se refresca sola cada 30 s mientras se está mirando

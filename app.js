@@ -653,6 +653,45 @@ async function refreshExtras() {
   applyExtras();
 }
 
+/* ---------- Clics en productos y «Tendencias» real ---------- */
+// Cada producto que se abre se anota (de forma anónima) junto con el agente elegido; «Tendencias» muestra los 100 más clicados de los últimos 30 días
+const TREND_KEY = 'Trending Now'; // categoría «Tendencias» de la hoja
+const TREND_MAX = 100;
+let trendKeys = [];               // claves «plataforma/id» de más a menos clics
+
+function trackClick(p) {
+  try { window.Stats?.click(productKeyOf(p.link), typeof agentId === 'string' ? agentId : 'usfans'); } catch { /* las estadísticas nunca deben romper la web */ }
+}
+
+async function fetchTrending() {
+  if (!CONFIG.accountApi) return null;
+  try {
+    const r = await fetch(`${CONFIG.accountApi}/trending`);
+    if (!r.ok) return null;
+    const j = await r.json();
+    return Array.isArray(j.items) ? j.items.map((x) => x.k) : null;
+  } catch { return null; }
+}
+
+// Los más clicados que están en el catálogo; si aún hay menos de 100 con clics, se completa con los «Tendencias» de la hoja
+function trendingList(scope, tokens) {
+  const byKey = new Map();
+  for (const p of scope) if (!p.gone) byKey.set(productKeyOf(p.link), p);
+  const picked = [];
+  const seen = new Set();
+  for (const k of trendKeys) {
+    const p = byKey.get(k);
+    if (p && !seen.has(k)) { seen.add(k); picked.push(p); if (picked.length >= TREND_MAX) break; }
+  }
+  for (const p of scope) {
+    if (picked.length >= TREND_MAX) break;
+    if (p.gone || !p.categories.includes(TREND_KEY)) continue;
+    const k = productKeyOf(p.link);
+    if (!seen.has(k)) { seen.add(k); picked.push(p); }
+  }
+  return picked.filter((p) => (!state.tab || tabMatch(p)) && tokens.every((t) => p._n.includes(t)) && priceOk(p));
+}
+
 function sampleProducts() {
   const cats = ['Calzado', 'Tops', 'Partes de abajo', 'Ropa de abrigo', 'Accesorios', 'Bolsos', 'Joyería'];
   const words = {
@@ -866,6 +905,7 @@ function applyFilters() {
     (!state.category || p.categories.includes(state.category)) &&
     tokens.every((t) => p._n.includes(t)) &&
     priceOk(p));
+  if (state.category === TREND_KEY) list = trendingList(scope, tokens);
 
   const byPrice = (a, b) => (isNaN(a.price) ? Infinity : a.price) - (isNaN(b.price) ? Infinity : b.price);
   if (state.sort === 'price-asc') list = list.slice().sort(byPrice);
@@ -1325,7 +1365,7 @@ function productMenu(p) {
   const url = agentUrl(p.link);
   if (isMobile()) {
     return [
-      { icon: '↗', label: t('openInApp', { agent: AGENTS[agentId].name }), action: () => { if (!launchApp(p.link)) openInApp(agentUrl(p.link)); } },
+      { icon: '↗', label: t('openInApp', { agent: AGENTS[agentId].name }), action: () => { trackClick(p); if (!launchApp(p.link)) openInApp(agentUrl(p.link)); } },
       { icon: '⎘', label: t('copyLink'), action: () => navigator.clipboard?.writeText(url) },
       '-',
       ...(CONFIG.accountApi ? [{ icon: '＋', label: t('addToHaul'), action: () => window.Hauls?.addMenu(p) }] : []),
@@ -1371,6 +1411,7 @@ function openInApp(url) {
 }
 
 function openProduct(p, { newTab = false, focus = false } = {}) {
+  trackClick(p);
   const url = agentUrl(p.link);
   if (isMobile()) {
     if (!launchApp(p.link)) openInApp(agentUrl(p.link));
@@ -1398,6 +1439,7 @@ function onProductClick(e) {
   const p = productFrom(e);
   if (!p || e.button !== 0) return;
   if (isMobile()) { // el enlace de la tarjeta se abre solo (en la app si está instalada); en iPhone con BoonBuy lo gestionamos nosotros
+    trackClick(p);
     if (launchApp(p.link)) e.preventDefault();
     return;
   }
@@ -2263,6 +2305,8 @@ async function init() {
   renderSkeleton();
   try {
     const extrasP = fetchExtras();
+    // Tendencias reales: llegan sin bloquear la carga; si se está viendo esa categoría, se repinta al llegar
+    fetchTrending().then((keys) => { if (keys) { trendKeys = keys; if (state.category === TREND_KEY && state.all.length) applyFilters(); } });
     baseCatalog = CONFIG.dataUrl ? await loadCsv(CONFIG.dataUrl) : sampleProducts();
     // Si el servidor tarda (o está bloqueado), la hoja se enseña igual y los productos propios se añaden cuando lleguen
     const early = await Promise.race([extrasP, new Promise((r) => setTimeout(() => r(null), 2000))]);
