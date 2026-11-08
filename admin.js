@@ -136,6 +136,7 @@ const Admin = (() => {
     const kUniq = el('b', { text: '–' });
     const kUsers = el('b', { text: '–' });
     const note = el('p', { class: 'adm-an-note' });
+    const countries = el('div', { class: 'adm-ctry' });
     const usersBtn = el('button', { class: 'btn ghost adm-an-mail', type: 'button', text: 'Ver correos', onclick: () => usersModal(range) });
     const kpi = (label, val, extra) => el('div', { class: 'adm-kpi' }, el('span', { class: 'adm-kpi-l', text: label }), val, extra);
 
@@ -166,6 +167,25 @@ const Admin = (() => {
       kUniq.textContent = num(d.traffic.uniques);
       kUsers.textContent = num(d.users.inRange);
       usersBtn.hidden = !d.users.inRange;
+      // «??» y «XX» son dos formas de decir «país desconocido»: se juntan en una sola fila
+      const unk = d.countries.filter((x) => x.code === '??' || x.code === 'XX');
+      const all = unk.length
+        ? [...d.countries.filter((x) => x.code !== '??' && x.code !== 'XX'), { code: 'XX', visits: unk.reduce((s, x) => s + x.visits, 0) }].sort((a, b) => b.visits - a.visits)
+        : d.countries;
+      const total = all.reduce((s, x) => s + x.visits, 0);
+      const nameOf = (code) => (code === '??' || code === 'XX' ? 'Desconocido' : code === 'T1' ? 'Red Tor' : (() => { try { return new Intl.DisplayNames(['es'], { type: 'region' }).of(code) || code; } catch { return code; } })());
+      const top = all.slice(0, 8);
+      const rest = all.slice(8).reduce((s, x) => s + x.visits, 0);
+      const list = rest ? [...top, { code: '', visits: rest, label: 'Otros' }] : top;
+      const max = Math.max(1, ...list.map((x) => x.visits));
+      countries.replaceChildren(...(total ? list.map((x) => {
+        const bar = el('i');
+        bar.style.setProperty('--w', `${Math.max(2, (x.visits / max) * 100)}%`);
+        return el('div', { class: 'adm-ctry-row' },
+          el('span', { class: 'adm-ctry-n', text: x.label || nameOf(x.code) }),
+          el('span', { class: 'adm-ctry-bg' }, bar),
+          el('span', { class: 'adm-ctry-v' }, el('b', { text: num(x.visits) }), ` · ${Math.round((x.visits / total) * 100)} %`));
+      }) : [el('p', { class: 'adm-ctry-empty', text: 'Aún no hay visitas en este periodo.' })]));
       const first = d.traffic.first ? new Date(d.traffic.first).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) : null;
       note.textContent = `${first ? `Hay datos de visitas desde el ${first}; antes de eso no se medía. ` : 'Aún no hay visitas registradas. '}`
         + '«Únicos» son personas distintas por día, sumadas: quien vuelve otro día cuenta otra vez. Nadie queda identificado.';
@@ -198,6 +218,7 @@ const Admin = (() => {
         kpi('Visitas totales', kVisits),
         kpi('Visitantes únicos', kUniq),
         kpi('Usuarios registrados', kUsers, usersBtn)),
+      el('h4', { class: 'adm-an-sec', text: 'Países de origen (visitas)' }), countries,
       note);
 
     // Se pide al activar el modo administrador (así ya está listo al abrir la pestaña) y se refresca sola cada 30 s mientras se está mirando

@@ -1237,6 +1237,14 @@ a.qc-thumb { display: block; cursor: zoom-in; }
 .adm-an-mail { height: 26px; margin: 2px 0 0 -10px; padding: 0 10px; font-size: 12px; }
 .adm-an-mail[hidden] { display: none; }
 .adm-an-note { margin: 12px 0 0; color: var(--muted); font-size: 11.5px; line-height: 1.4; text-wrap: pretty; }
+.adm-ctry { display: flex; flex-direction: column; gap: 7px; margin-top: 14px; }
+.adm-ctry-row { display: grid; grid-template-columns: minmax(70px, 34%) 1fr auto; align-items: center; gap: 10px; font-size: 13px; }
+.adm-ctry-n { overflow: hidden; color: var(--ink-2); white-space: nowrap; text-overflow: ellipsis; }
+.adm-ctry-bg { height: 8px; border-radius: 4px; background: var(--fill-hover); overflow: hidden; }
+.adm-ctry-bg i { display: block; width: var(--w); height: 100%; border-radius: 4px; background: var(--accent); }
+.adm-ctry-v { font-variant-numeric: tabular-nums; text-align: right; color: var(--muted); font-size: 12px; }
+.adm-ctry-v b { color: var(--ink); font-weight: 500; }
+.adm-ctry-empty { margin: 0; color: var(--muted); font-size: 12.5px; }
 .adm-mails { max-height: 55vh; overflow-y: auto; }
 .acc-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; }
 .acc-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; }
