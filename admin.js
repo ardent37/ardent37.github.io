@@ -111,8 +111,122 @@ const Admin = (() => {
       b.onclick = t.run;
       list.append(b);
     }
-    wrap.append(h, list);
+    wrap.append(h, list, analysis());
     return wrap;
+  }
+
+  /* ---------- Análisis: mantenimiento y tráfico ---------- */
+  const num = (n) => Number(n || 0).toLocaleString('es-ES');
+  const size = (b) => (b >= 1024 ** 3 ? `${(b / 1024 ** 3).toFixed(2)} GB` : `${(b / 1024 ** 2).toFixed(b < 10 * 1024 ** 2 ? 2 : 1)} MB`);
+  const RANGES = [['all', 'Siempre'], ['30d', '30 días'], ['7d', '7 días'], ['24h', '24 horas']];
+  const RANGE_NAME = { all: 'desde siempre', '30d': 'últimos 30 días', '7d': 'últimos 7 días', '24h': 'últimas 24 horas' };
+
+  function analysis() {
+    const { el } = ui();
+    let range = 'all';
+    let site = '';
+    try { range = RANGES.some(([k]) => k === localStorage.getItem('admRange')) ? localStorage.getItem('admRange') : 'all'; } catch { /* sin almacenamiento */ }
+
+    const upd = el('span', { class: 'adm-an-upd', text: 'Cargando…' });
+    const onlineN = el('b', { text: '–' });
+    const rows = el('div', { class: 'adm-an-rows' });
+    const seg = el('div', { class: 'adm-seg', role: 'group', 'aria-label': 'Periodo' });
+    const siteSel = el('select', { class: 'adm-sel adm-an-site', 'aria-label': 'Web' });
+    const kVisits = el('b', { text: '–' });
+    const kUniq = el('b', { text: '–' });
+    const kUsers = el('b', { text: '–' });
+    const note = el('p', { class: 'adm-an-note' });
+    const usersBtn = el('button', { class: 'btn ghost adm-an-mail', type: 'button', text: 'Ver correos', onclick: () => usersModal(range) });
+    const kpi = (label, val, extra) => el('div', { class: 'adm-kpi' }, el('span', { class: 'adm-kpi-l', text: label }), val, extra);
+
+    const row = (label, value, ratio) => {
+      const r = el('div', { class: 'adm-row' }, el('span', { class: 'adm-row-l', text: label }), el('span', { class: 'adm-row-v', text: value }));
+      if (ratio != null) {
+        const bar = el('i', { class: `adm-bar${ratio > 0.9 ? ' hot' : ratio > 0.7 ? ' warm' : ''}` });
+        bar.style.setProperty('--w', `${Math.max(1, Math.min(100, ratio * 100))}%`);
+        r.append(el('span', { class: 'adm-bar-bg' }, bar));
+      }
+      return r;
+    };
+
+    const paint = (d) => {
+      const m = d.maintenance;
+      onlineN.textContent = num(d.online) + (d.online >= d.onlineMax ? '+' : '');
+      rows.replaceChildren(
+        row('Base de datos', `${size(m.dbBytes)} / ${size(m.dbLimit)}`, m.dbBytes / m.dbLimit),
+        row('Visitas registradas hoy', `${num(m.visitsToday)} / ${num(m.visitsDayMax)}`, m.visitsToday / m.visitsDayMax),
+        row('Productos en la caché compartida (hoy)', `${num(m.goodsToday)} / ${num(m.goodsDayMax)}`, m.goodsToday / m.goodsDayMax),
+        row('Correos de acceso enviados (hoy)', `${num(m.codesToday)} / ${num(m.codesDayMax)}`, m.codesToday / m.codesDayMax),
+        row('Productos propios', num(m.adminProducts)),
+        row('Fotos subidas', `${num(m.adminImages)} (${size(m.adminImageBytes)})`),
+        row('Productos guardados en la caché', num(m.goods)),
+        row('Hauls · hojas importadas', `${num(m.hauls)} · ${num(m.imports)}`),
+      );
+      kVisits.textContent = num(d.traffic.visits);
+      kUniq.textContent = num(d.traffic.uniques);
+      kUsers.textContent = num(d.users.inRange);
+      usersBtn.hidden = !d.users.inRange;
+      const first = d.traffic.first ? new Date(d.traffic.first).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) : null;
+      note.textContent = `${first ? `Hay datos de visitas desde el ${first}; antes de eso no se medía. ` : 'Aún no hay visitas registradas. '}`
+        + '«Únicos» son personas distintas por día, sumadas: quien vuelve otro día cuenta otra vez. Nadie queda identificado.';
+      const known = [...siteSel.options].map((o) => o.value);
+      if (d.sites.some((s) => !known.includes(s)) || !siteSel.options.length) {
+        siteSel.replaceChildren(el('option', { value: '', text: 'Todas las webs' }), ...d.sites.map((s) => el('option', { value: s, text: s })));
+        siteSel.value = site;
+      }
+      upd.textContent = `Actualizado ${new Date().toLocaleTimeString('es-ES')}`;
+    };
+
+    const load = async () => {
+      try { paint(await api(`/admin/stats?range=${range}&site=${encodeURIComponent(site)}`)); } catch { upd.textContent = 'Sin conexión'; }
+    };
+
+    const drawSeg = () => seg.replaceChildren(...RANGES.map(([k, label]) => el('button', {
+      type: 'button', class: 'adm-seg-b', 'aria-pressed': String(k === range), text: label,
+      onclick: () => { range = k; try { localStorage.setItem('admRange', k); } catch { /* sin almacenamiento */ } drawSeg(); load(); },
+    })));
+    drawSeg();
+    siteSel.onchange = () => { site = siteSel.value; load(); };
+
+    const box = el('div', { class: 'adm-an' },
+      el('div', { class: 'adm-an-head' }, el('h3', { class: 'adm-an-title', text: 'Análisis' }), upd),
+      el('div', { class: 'adm-an-online' }, el('i', { class: 'adm-dot' }), onlineN, el('span', { text: ' usuarios online ahora' })),
+      el('h4', { class: 'adm-an-sec', text: 'Mantenimiento' }), rows,
+      el('h4', { class: 'adm-an-sec', text: 'Tráfico y usuarios' }),
+      el('div', { class: 'adm-an-bar' }, seg, siteSel),
+      el('div', { class: 'adm-an-kpis' },
+        kpi('Visitas totales', kVisits),
+        kpi('Visitantes únicos', kUniq),
+        kpi('Usuarios registrados', kUsers, usersBtn)),
+      note);
+
+    // Se carga al abrir la pestaña y se refresca sola cada 30 s mientras se está mirando
+    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) load(); });
+    io.observe(box);
+    const timer = setInterval(() => {
+      if (!box.isConnected) { clearInterval(timer); io.disconnect(); return; }
+      if (!document.hidden && box.offsetParent !== null) load();
+    }, 30000);
+    return box;
+  }
+
+  async function usersModal(range) {
+    const { el, openModal, closeBtn, heading, errBox, showErr } = ui();
+    const err = errBox();
+    const list = el('ul', { class: 'acc-list adm-mails' });
+    const copy = el('button', { class: 'btn ghost', type: 'button', text: 'Copiar correos', hidden: true });
+    openModal(closeBtn(), ...heading('Usuarios registrados', RANGE_NAME[range]), list, err, el('div', { class: 'modal-row spread' }, copy));
+    try {
+      const r = await api(`/admin/stats/users?range=${range}`);
+      list.replaceChildren(...(r.items.length ? r.items.map((u) => el('li', {},
+        el('span', { class: 'acc-name' }, el('b', { text: u.email }),
+          el('small', { text: `${new Date(u.created_at).toLocaleDateString('es-ES')}${u.marketing ? ' · acepta novedades' : ''}` }))))
+        : [el('li', { class: 'acc-empty', text: 'Nadie en este periodo.' })]));
+      copy.hidden = !r.items.length;
+      copy.onclick = async () => {
+        try { await navigator.clipboard.writeText(r.items.map((u) => u.email).join('\n')); copy.textContent = 'Copiados ✓'; } catch { showErr(err, 'No se han podido copiar.'); }
+      };
+    } catch (e) { showErr(err, errText(e)); }
   }
 
   function activate() {
