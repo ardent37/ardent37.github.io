@@ -168,6 +168,7 @@ const Admin = (() => {
       kUsers.textContent = num(d.users.inRange);
       usersBtn.hidden = !d.users.inRange;
       // «??» y «XX» son dos formas de decir «país desconocido»: se juntan en una sola fila
+      d.countries ||= []; // (un servidor anterior no enviaba países)
       const unk = d.countries.filter((x) => x.code === '??' || x.code === 'XX');
       const all = unk.length
         ? [...d.countries.filter((x) => x.code !== '??' && x.code !== 'XX'), { code: 'XX', visits: unk.reduce((s, x) => s + x.visits, 0) }].sort((a, b) => b.visits - a.visits)
