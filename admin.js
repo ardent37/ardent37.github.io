@@ -158,9 +158,10 @@ const Admin = (() => {
 
     const paint = (d) => {
       const m = d.maintenance;
+      const dbLimit = Math.min(m.dbLimit || Infinity, 500 * 1024 ** 2); // plan gratuito: 500 MB por base de datos (5 GB es el total de la cuenta)
       onlineN.textContent = num(d.online) + (d.online >= d.onlineMax ? '+' : '');
       rows.replaceChildren(
-        row('Base de datos', `${size(m.dbBytes)} / ${size(m.dbLimit)}`, m.dbBytes / m.dbLimit),
+        row('Base de datos', `${size(m.dbBytes)} / ${size(dbLimit)}`, m.dbBytes / dbLimit),
         row('Visitas registradas hoy', `${num(m.visitsToday)} / ${num(m.visitsDayMax)}`, m.visitsToday / m.visitsDayMax),
         ...(m.clicksDayMax ? [row('Clics en productos registrados hoy', `${num(m.clicksToday)} / ${num(m.clicksDayMax)}`, m.clicksToday / m.clicksDayMax)] : []),
         row('Productos en la caché compartida (hoy)', `${num(m.goodsToday)} / ${num(m.goodsDayMax)}`, m.goodsToday / m.goodsDayMax),
