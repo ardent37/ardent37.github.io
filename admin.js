@@ -200,7 +200,8 @@ const Admin = (() => {
         kpi('Usuarios registrados', kUsers, usersBtn)),
       note);
 
-    // Se carga al abrir la pestaña y se refresca sola cada 30 s mientras se está mirando
+    // Se pide al activar el modo administrador (así ya está listo al abrir la pestaña) y se refresca sola cada 30 s mientras se está mirando
+    load();
     const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) load(); });
     io.observe(box);
     const timer = setInterval(() => {
