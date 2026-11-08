@@ -126,6 +126,137 @@ const Admin = (() => {
   const RANGES = [['all', 'Siempre'], ['30d', '30 días'], ['7d', '7 días'], ['24h', '24 horas']];
   const RANGE_NAME = { all: 'desde siempre', '30d': 'últimos 30 días', '7d': 'últimos 7 días', '24h': 'últimas 24 horas' };
 
+  /* ---------- Semáforo: cuánto riesgo supone cada dato y qué hacer ---------- */
+  // Cada regla devuelve { level: ok | warn | bad | na, title, text }. Los umbrales salen de los límites del plan gratuito de Cloudflare y de Resend.
+  const PAID = 'Workers Paid (5 $ al mes: Cloudflare → Workers y Pages → Planes)';
+  const lv = (level, title, text) => ({ level, title, text });
+  const MB = 1048576;
+  const RULES = {
+    info: () => lv('na', 'Solo informativo', 'Este dato no tiene un límite propio que vigilar. El espacio que ocupa ya sale dentro de «Base de datos».'),
+    db: (b) => {
+      const t = `Base de datos: ${size(b)} de 500 MB`;
+      if (b < 250 * MB) return lv('ok', t, 'Hay mucho margen. Lo que más la llena son las fotos subidas, las hojas importadas y los productos guardados en la caché.');
+      if (b < 400 * MB) return lv('warn', t, `Ya ocupa más de la mitad. Mira qué crece (fotos subidas, caché de productos) y ve pensando en contratar ${PAID}, que sube el límite a 10 GB.`);
+      return lv('bad', t, `Se acerca al límite: si se llena dejarán de guardarse cuentas, hauls y fotos nuevas. Contrata ${PAID} (10 GB) o borra lo que no uses.`);
+    },
+    visits: (n) => {
+      const t = `${num(n)} visitas hoy`;
+      if (n < 3000) return lv('ok', t, 'Tráfico normal: el plan gratuito aguanta unas 16.000 visitas al día. Vas sobrado.');
+      if (n < 8000) return lv('warn', t, `Ya tienes bastante tráfico. Si se repite varios días seguidos, piensa en contratar ${PAID}. Mira también «Peticiones al servidor».`);
+      return lv('bad', t, `Estás cerca del límite del plan gratuito (unas 16.000 visitas al día). Si no es un pico de un solo día, contrata ${PAID} y avísame para subir los topes.`);
+    },
+    online: (n) => {
+      const t = `${num(n)} usuarios online`;
+      if (n < 30) return lv('ok', t, 'Nivel normal. Es una foto del momento, no un límite.');
+      if (n < 100) return lv('warn', t, 'Hay mucha gente a la vez. Mira cómo evolucionan hoy las visitas y las peticiones: puede ser el principio de un pico.');
+      return lv('bad', t, `Mucha gente a la vez (un pico). Revisa ahora las peticiones al servidor y las visitas de hoy; si van altas, contrata ${PAID}.`);
+    },
+    clicks: (n, max) => {
+      const t = `${num(n)} clics en productos hoy (tope ${num(max)})`;
+      if (n < 6000) return lv('ok', t, 'Normal. Es el contador que alimenta «Tendencias» y el gráfico de agentes.');
+      if (n < 10000) return lv('warn', t, 'Se acerca al tope de protección diario. Cuando se alcanza, deja de contar clics ese día (la web sigue funcionando).');
+      return lv('bad', t, `Casi en el tope de protección (${num(max)}): hoy se dejarán de contar clics. Tras contratar ${PAID}, avísame y lo subo.`);
+    },
+    goods: (n, max) => {
+      const t = `${num(n)} productos guardados hoy en la caché compartida`;
+      if (n < max * 0.9) return lv('ok', t, 'Normal. Es la caché que acelera las fotos y los precios; tiene un tope diario para no gastar escrituras.');
+      return lv('warn', t, 'La caché alcanza casi su tope diario. No rompe nada: solo se guardan menos productos nuevos hasta mañana y algunas fotos tardarán más. Se soluciona con ' + PAID + '.');
+    },
+    codes: (n) => {
+      const t = `${num(n)} códigos de acceso pedidos hoy`;
+      if (n < 40) return lv('ok', t, 'Normal. Cada código es un correo; el plan gratuito de correo permite 100 al día.');
+      if (n < 70) return lv('warn', t, 'Muchas personas están entrando hoy. El correo gratuito permite 100 al día y la web se frena sola en 80: vigila que no se agote.');
+      return lv('bad', t, 'Cerca del límite diario de correos: cuando se agote, nadie nuevo podrá iniciar sesión. Contrata Resend Pro (20 $/mes, 50.000 al mes: resend.com → Billing).');
+    },
+    mailMonth: (n) => {
+      const t = `${num(n)} correos enviados este mes (de 3.000)`;
+      const note = ' (Este contador empieza el día que se activó; el total exacto está en resend.com.)';
+      if (n < 1500) return lv('ok', t, 'Vas bien con el límite mensual del plan gratuito de Resend.' + note);
+      if (n < 2500) return lv('warn', t, 'Ya has gastado más de la mitad del mes. Si sigue así llegarás al límite: ve pensando en Resend Pro (20 $/mes, 50.000 al mes).' + note);
+      return lv('bad', t, 'Casi agotado el límite mensual: al llegar a 3.000 nadie nuevo podrá iniciar sesión hasta el mes siguiente. Contrata Resend Pro (20 $/mes: resend.com → Billing).' + note);
+    },
+    mailFailed: (n) => {
+      const t = `${num(n)} envíos de correo fallidos este mes`;
+      if (n === 0) return lv('ok', t, 'Ningún envío ha fallado este mes.');
+      if (n <= 5) return lv('warn', t, 'Algún correo no ha salido: esas personas no recibieron su código. Mira resend.com → Emails para ver el motivo.');
+      return lv('bad', t, 'Fallan varios envíos. Lo más probable: se agotó el límite de Resend (100 al día o 3.000 al mes) o hay un problema con el dominio de correo. Mira resend.com y, si es el límite, contrata Resend Pro (20 $/mes).');
+    },
+    requests: (n) => {
+      const t = `${num(n)} peticiones al servidor hoy (de 100.000)`;
+      if (n < 50000) return lv('ok', t, 'Vas bien. Cada visita gasta unas 5 o 6 peticiones. El contador se reinicia a las 00:00 UTC (01:00–02:00 en España).');
+      if (n < 80000) return lv('warn', t, `Más de la mitad del límite diario. Si esto se repite varios días, contrata ${PAID}.`);
+      return lv('bad', t, `Cerca de agotar el límite de hoy: cuando se acabe, hasta las 00:00 UTC (01:00–02:00 en España) fallarán el inicio de sesión, los hauls y este panel. Contrata ${PAID} ahora.`);
+    },
+    errors: (n, req) => {
+      const t = `${num(n)} errores del servidor hoy`;
+      const pct = req ? (n / req) * 100 : 0;
+      if (n < 20 || pct < 1) return lv('ok', t, 'Normal: un puñado de errores sueltos es habitual.');
+      if (pct < 5) return lv('warn', t, 'Fallan algunas peticiones (más del 1 %). Mira Cloudflare → Workers y Pages → usfans-api → Registros/Métricas. Si coincide con mucha gente a la vez, puede ser el límite diario.');
+      return lv('bad', t, `Falla más de 1 de cada 20 peticiones: algo va mal o se ha agotado el límite diario. Mira Cloudflare → Workers y Pages → usfans-api. Si son las peticiones, contrata ${PAID}.`);
+    },
+    writes: (n) => {
+      const t = `${num(n)} escrituras en la base de datos hoy (de 100.000)`;
+      if (n < 50000) return lv('ok', t, 'Vas bien. Se reinicia a las 00:00 UTC.');
+      if (n < 80000) return lv('warn', t, `Más de la mitad del límite diario. Si se repite varios días, contrata ${PAID}, que incluye 50 millones de escrituras al mes.`);
+      return lv('bad', t, `Cerca del límite: al agotarse hoy no se podrá guardar nada nuevo (cuentas, hauls, clics, visitas) hasta las 00:00 UTC. Contrata ${PAID} ahora.`);
+    },
+    reads: (n) => {
+      const t = `${num(n)} lecturas en la base de datos hoy (de 5 millones)`;
+      if (n < 2500000) return lv('ok', t, 'Vas bien. Se reinicia a las 00:00 UTC.');
+      if (n < 4000000) return lv('warn', t, `Más de la mitad del límite diario. Si se repite, contrata ${PAID}.`);
+      return lv('bad', t, `Cerca del límite: al agotarse hoy dejarán de cargar cuentas y hauls hasta las 00:00 UTC. Contrata ${PAID} ahora.`);
+    },
+    capacity: (n, max, what) => {
+      const t = `${num(n)} ${what} (máximo ${num(max)})`;
+      if (n < max * 0.7) return lv('ok', t, 'Hay margen de sobra.');
+      if (n < max * 0.9) return lv('warn', t, 'Te acercas al máximo que permite la web. Avísame y lo amplío.');
+      return lv('bad', t, 'Casi en el máximo que permite la web: no se podrán añadir más hasta que lo amplíe. Avísame.');
+    },
+    usageOff: () => lv('na', 'Consumo real de Cloudflare: sin activar',
+      'Para ver aquí las peticiones, errores y lecturas/escrituras reales: 1) Cloudflare → Mi perfil → Tokens de API → Crear token personalizado, con el permiso «Cuenta · Analíticas de la cuenta · Leer». 2) Guárdalo con «wrangler secret put CF_API_TOKEN» (en la carpeta E:\\usfans-api).'),
+    usageProblem: (list) => lv('warn', 'No se ha podido leer todo el consumo de Cloudflare', `${list.join(' · ')}. Revisa que el token de API sea de solo lectura con el permiso «Cuenta · Analíticas de la cuenta · Leer» y que sea de esta cuenta.`),
+  };
+
+  // Ventanita de ayuda del semáforo (una sola, flotante; sirve con el ratón y tocando en el móvil)
+  let tipEl = null;
+  const hideTip = () => { tipEl?.remove(); tipEl = null; };
+  function showTip(node) {
+    hideTip();
+    const r = node._r;
+    if (!r) return;
+    tipEl = document.createElement('div');
+    tipEl.className = `adm-tip ${r.level}`;
+    tipEl.setAttribute('role', 'tooltip');
+    const b = document.createElement('b');
+    b.textContent = r.title;
+    const p = document.createElement('p');
+    p.textContent = r.text;
+    tipEl.append(b, p);
+    document.body.appendChild(tipEl);
+    const a = node.getBoundingClientRect();
+    const w = tipEl.offsetWidth;
+    const h = tipEl.offsetHeight;
+    tipEl.style.left = `${Math.max(8, Math.min(a.left - 4, innerWidth - w - 8))}px`;
+    tipEl.style.top = `${a.bottom + 8 + h > innerHeight - 8 ? Math.max(8, a.top - h - 8) : a.bottom + 8}px`;
+  }
+  function setRisk(node, r) {
+    node.classList.remove('ok', 'warn', 'bad', 'na');
+    node.classList.add('adm-risk', r.level);
+    node._r = r;
+    node.setAttribute('aria-label', `${r.title}. ${r.text}`);
+    if (node._tip) return;
+    node._tip = true;
+    node.tabIndex = 0;
+    node.setAttribute('role', 'img');
+    node.addEventListener('mouseenter', () => showTip(node));
+    node.addEventListener('mouseleave', hideTip);
+    node.addEventListener('focus', () => showTip(node));
+    node.addEventListener('blur', hideTip);
+    node.addEventListener('click', (e) => { e.stopPropagation(); if (tipEl) hideTip(); else showTip(node); });
+  }
+  document.addEventListener('scroll', hideTip, true);
+  document.addEventListener('pointerdown', (e) => { if (!e.target.closest?.('.adm-risk')) hideTip(); });
+
   function analysis() {
     const { el } = ui();
     let range = 'all';
@@ -134,6 +265,8 @@ const Admin = (() => {
 
     const upd = el('span', { class: 'adm-an-upd', text: 'Cargando…' });
     const onlineN = el('b', { text: '–' });
+    const onlineRisk = el('span', { class: 'adm-risk na' });
+    const overall = el('span', { class: 'adm-risk na adm-overall' });
     const rows = el('div', { class: 'adm-an-rows' });
     const seg = el('div', { class: 'adm-seg', role: 'group', 'aria-label': 'Periodo' });
     const siteSel = el('select', { class: 'adm-sel adm-an-site', 'aria-label': 'Web' });
@@ -145,32 +278,74 @@ const Admin = (() => {
     const agentsBox = el('div', { class: 'adm-ctry' });
     const usersBtn = el('button', { class: 'btn ghost adm-an-mail', type: 'button', text: 'Ver correos', onclick: () => usersModal(range) });
     const kpi = (label, val, extra) => el('div', { class: 'adm-kpi' }, el('span', { class: 'adm-kpi-l', text: label }), val, extra);
+    let findings = [];
 
-    const row = (label, value, ratio) => {
-      const r = el('div', { class: 'adm-row' }, el('span', { class: 'adm-row-l', text: label }), el('span', { class: 'adm-row-v', text: value }));
+    // Una fila con su cuadradito de color (verde, amarillo o rojo) y la ventanita al pasar el cursor
+    const row = (label, value, ratio, rule) => {
+      const r = rule || RULES.info();
+      const dot = el('span', { class: 'adm-risk na' });
+      setRisk(dot, r);
+      if (r.level === 'warn' || r.level === 'bad') findings.push(r);
+      const rr = el('div', { class: 'adm-row' }, dot, el('span', { class: 'adm-row-l', text: label }), el('span', { class: 'adm-row-v', text: value }));
       if (ratio != null) {
-        const bar = el('i', { class: `adm-bar${ratio > 0.9 ? ' hot' : ratio > 0.7 ? ' warm' : ''}` });
+        const bar = el('i', { class: `adm-bar${r.level === 'bad' ? ' hot' : r.level === 'warn' ? ' warm' : ''}` });
         bar.style.setProperty('--w', `${Math.max(1, Math.min(100, ratio * 100))}%`);
-        r.append(el('span', { class: 'adm-bar-bg' }, bar));
+        rr.append(el('span', { class: 'adm-bar-bg' }, bar));
       }
-      return r;
+      return rr;
     };
 
-    const paint = (d) => {
+    const paint = (d, u) => {
+      hideTip();
+      findings = [];
       const m = d.maintenance;
-      const dbLimit = Math.min(m.dbLimit || Infinity, 500 * 1024 ** 2); // plan gratuito: 500 MB por base de datos (5 GB es el total de la cuenta)
+      const dbLimit = Math.min(m.dbLimit || Infinity, 500 * MB); // plan gratuito: 500 MB por base de datos (5 GB es el total de la cuenta)
+      const mail = d.mail;
       onlineN.textContent = num(d.online) + (d.online >= d.onlineMax ? '+' : '');
+      const onRule = RULES.online(d.online);
+      setRisk(onlineRisk, onRule);
+      if (onRule.level === 'warn' || onRule.level === 'bad') findings.push(onRule);
+
+      // Consumo real de Cloudflare (si el token está puesto): es lo que de verdad se agota
+      const cf = [];
+      if (u && u.configured) {
+        if (u.workers) {
+          cf.push(row('Peticiones al servidor (hoy)', `${num(u.workers.requests)} / 100.000`, u.workers.requests / 100000, RULES.requests(u.workers.requests)));
+          cf.push(row('Errores del servidor (hoy)', num(u.workers.errors), null, RULES.errors(u.workers.errors, u.workers.requests)));
+        }
+        if (u.d1 && u.d1.rowsWritten != null) cf.push(row('Escrituras en la base de datos (hoy)', `${num(u.d1.rowsWritten)} / 100.000`, u.d1.rowsWritten / 100000, RULES.writes(u.d1.rowsWritten)));
+        if (u.d1 && u.d1.rowsRead != null) cf.push(row('Lecturas en la base de datos (hoy)', `${num(u.d1.rowsRead)} / 5.000.000`, u.d1.rowsRead / 5000000, RULES.reads(u.d1.rowsRead)));
+        if (u.problems && u.problems.length) cf.push(row('Consumo de Cloudflare', 'con avisos', null, RULES.usageProblem(u.problems)));
+      } else if (u && u.configured === false) {
+        cf.push(row('Consumo real de Cloudflare', 'sin activar', null, RULES.usageOff()));
+      }
+
       rows.replaceChildren(
-        row('Base de datos', `${size(m.dbBytes)} / ${size(dbLimit)}`, m.dbBytes / dbLimit),
-        row('Visitas registradas hoy', `${num(m.visitsToday)} / ${num(m.visitsDayMax)}`, m.visitsToday / m.visitsDayMax),
-        ...(m.clicksDayMax ? [row('Clics en productos registrados hoy', `${num(m.clicksToday)} / ${num(m.clicksDayMax)}`, m.clicksToday / m.clicksDayMax)] : []),
-        row('Productos en la caché compartida (hoy)', `${num(m.goodsToday)} / ${num(m.goodsDayMax)}`, m.goodsToday / m.goodsDayMax),
-        row('Correos de acceso enviados (hoy)', `${num(m.codesToday)} / ${num(m.codesDayMax)}`, m.codesToday / m.codesDayMax),
-        row('Productos propios', num(m.adminProducts)),
-        row('Fotos subidas', `${num(m.adminImages)} (${size(m.adminImageBytes)})`),
+        ...cf,
+        row('Base de datos', `${size(m.dbBytes)} / ${size(dbLimit)}`, m.dbBytes / dbLimit, RULES.db(m.dbBytes)),
+        row('Visitas registradas hoy', `${num(m.visitsToday)} / ${num(m.visitsDayMax)}`, m.visitsToday / m.visitsDayMax, RULES.visits(m.visitsToday)),
+        ...(m.clicksDayMax ? [row('Clics en productos registrados hoy', `${num(m.clicksToday)} / ${num(m.clicksDayMax)}`, m.clicksToday / m.clicksDayMax, RULES.clicks(m.clicksToday, m.clicksDayMax))] : []),
+        row('Productos en la caché compartida (hoy)', `${num(m.goodsToday)} / ${num(m.goodsDayMax)}`, m.goodsToday / m.goodsDayMax, RULES.goods(m.goodsToday, m.goodsDayMax)),
+        row('Correos de acceso pedidos (hoy)', `${num(m.codesToday)} / ${num(m.codesDayMax)}`, m.codesToday / m.codesDayMax, RULES.codes(m.codesToday)),
+        ...(mail ? [
+          row('Correos enviados este mes', `${num(mail.sent)} / ${num(mail.monthLimit)}`, mail.sent / mail.monthLimit, RULES.mailMonth(mail.sent)),
+          row('Envíos de correo fallidos este mes', num(mail.failed), null, RULES.mailFailed(mail.failed)),
+        ] : []),
+        row('Productos propios', num(m.adminProducts), null, RULES.capacity(m.adminProducts, 3000, 'productos propios')),
+        row('Fotos subidas', `${num(m.adminImages)} (${size(m.adminImageBytes)})`, null, RULES.capacity(m.adminImages, 3000, 'fotos subidas')),
         row('Productos guardados en la caché', num(m.goods)),
         row('Hauls · hojas importadas', `${num(m.hauls)} · ${num(m.imports)}`),
       );
+
+      // Estado general: el peor de todos
+      const bad = findings.filter((f) => f.level === 'bad');
+      const warn = findings.filter((f) => f.level === 'warn');
+      setRisk(overall, bad.length
+        ? lv('bad', `Estado general: ${bad.length} dato${bad.length > 1 ? 's' : ''} en rojo`, `Pasa el cursor por los cuadraditos rojos de abajo para ver qué hacer. En rojo: ${bad.map((f) => f.title).join(' · ')}.`)
+        : warn.length
+          ? lv('warn', `Estado general: ${warn.length} dato${warn.length > 1 ? 's' : ''} en amarillo`, `Nada urgente, pero vigílalo. En amarillo: ${warn.map((f) => f.title).join(' · ')}.`)
+          : lv('ok', 'Estado general: todo en orden', 'Ningún dato está cerca de un límite. No hace falta contratar nada ahora.'));
+
       kVisits.textContent = num(d.traffic.visits);
       kUniq.textContent = num(d.traffic.uniques);
       kUsers.textContent = num(d.users.inRange);
@@ -222,7 +397,13 @@ const Admin = (() => {
     };
 
     const load = async () => {
-      try { paint(await api(`/admin/stats?range=${range}&site=${encodeURIComponent(site)}`)); } catch { upd.textContent = 'Sin conexión'; }
+      try {
+        const [d, u] = await Promise.all([
+          api(`/admin/stats?range=${range}&site=${encodeURIComponent(site)}`),
+          api('/admin/usage').catch(() => null), // un servidor anterior no lo tiene: simplemente no se muestra
+        ]);
+        paint(d, u);
+      } catch { upd.textContent = 'Sin conexión'; }
     };
 
     const drawSeg = () => seg.replaceChildren(...RANGES.map(([k, label]) => el('button', {
@@ -233,8 +414,8 @@ const Admin = (() => {
     siteSel.onchange = () => { site = siteSel.value; load(); };
 
     const box = el('div', { class: 'adm-an' },
-      el('div', { class: 'adm-an-head' }, el('h3', { class: 'adm-an-title', text: 'Análisis' }), upd),
-      el('div', { class: 'adm-an-online' }, el('i', { class: 'adm-dot' }), onlineN, el('span', { text: ' usuarios online ahora' })),
+      el('div', { class: 'adm-an-head' }, el('h3', { class: 'adm-an-title' }, 'Análisis ', overall), upd),
+      el('div', { class: 'adm-an-online' }, el('i', { class: 'adm-dot' }), onlineN, el('span', { text: ' usuarios online ahora' }), onlineRisk),
       el('h4', { class: 'adm-an-sec', text: 'Mantenimiento' }), rows,
       el('h4', { class: 'adm-an-sec', text: 'Tráfico y usuarios' }),
       el('div', { class: 'adm-an-bar' }, seg, siteSel),

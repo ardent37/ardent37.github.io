@@ -1218,9 +1218,24 @@ a.qc-thumb { display: block; cursor: zoom-in; }
 .adm-dot { width: 9px; height: 9px; border-radius: 50%; background: #2fb344; box-shadow: 0 0 0 3px color-mix(in srgb, #2fb344 28%, transparent); animation: admPulse 2s ease-in-out infinite; }
 @keyframes admPulse { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, #2fb344 8%, transparent); } }
 .adm-an-sec { margin: 16px 0 6px; color: var(--muted); font-size: 11.5px; font-weight: 500; letter-spacing: .03em; text-transform: uppercase; }
-.adm-row { display: grid; grid-template-columns: 1fr auto; column-gap: 12px; row-gap: 4px; align-items: baseline; padding: 6px 0; font-size: 13px; }
+.adm-row { display: grid; grid-template-columns: 12px 1fr auto; column-gap: 10px; row-gap: 4px; align-items: center; padding: 6px 0; font-size: 13px; }
 .adm-row-l { color: var(--ink-2); min-width: 0; }
 .adm-row-v { font-variant-numeric: tabular-nums; text-align: right; }
+.adm-risk { flex: none; display: inline-block; width: 12px; height: 12px; border-radius: 4px; background: var(--fill-hover); cursor: help; vertical-align: middle; }
+.adm-risk.ok { background: #2fb344; }
+.adm-risk.warn { background: #e8a317; }
+.adm-risk.bad { background: #e5484d; }
+.adm-risk.na { background: transparent; box-shadow: inset 0 0 0 1.5px var(--faint); }
+.adm-risk:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.adm-overall { margin-left: 6px; width: 13px; height: 13px; }
+.adm-an-online .adm-risk { margin-left: 4px; }
+.adm-tip { position: fixed; z-index: 300; width: min(310px, calc(100vw - 16px)); padding: 11px 13px; border-radius: 12px; background: var(--ink); color: var(--canvas); font-size: 12.5px; line-height: 1.4; box-shadow: 0 10px 30px rgba(0, 0, 0, .3); pointer-events: none; animation: pricePop .14s ease-out; }
+.adm-tip b { display: block; margin-bottom: 4px; font-size: 13px; font-weight: 600; }
+.adm-tip b::before { content: ""; display: inline-block; width: 9px; height: 9px; margin-right: 7px; border-radius: 3px; background: var(--faint); }
+.adm-tip.ok b::before { background: #2fb344; }
+.adm-tip.warn b::before { background: #e8a317; }
+.adm-tip.bad b::before { background: #e5484d; }
+.adm-tip p { margin: 0; opacity: .92; text-wrap: pretty; }
 .adm-bar-bg { grid-column: 1 / -1; display: block; height: 4px; border-radius: 2px; background: var(--fill-hover); overflow: hidden; }
 .adm-bar { display: block; width: var(--w); height: 100%; border-radius: 2px; background: var(--accent); }
 .adm-bar.warm { background: #e8a317; }
