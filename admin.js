@@ -62,19 +62,63 @@ const Admin = (() => {
   }
 
   /* ---------- Activar / desactivar ---------- */
+  const ICON = '<svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 3.5l7 2.6v5.1c0 4.2-2.9 7.6-7 9.3-4.1-1.7-7-5.1-7-9.3V6.1z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 12l2.2 2.2L15.2 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  // La pestaña «Admin» (junto a Fotos QC) solo existe en el navegador de quien tiene el dispositivo autorizado
+  function addTab() {
+    if (TOOLS.some((x) => x.id === 'admin')) return;
+    for (const l of Object.keys(I18N)) I18N[l].toolAdmin = 'Admin';
+    TOOL_ICONS.admin = ICON;
+    TOOLS.push({ id: 'admin', labelKey: 'toolAdmin' });
+    const sec = document.createElement('section');
+    sec.className = 'tool';
+    sec.id = 'tool-admin';
+    sec.setAttribute('role', 'tabpanel');
+    sec.hidden = true;
+    sec.append(panel());
+    $id('tool-qc').after(sec);
+    renderTools();
+  }
+
+  function removeTab() {
+    const i = TOOLS.findIndex((x) => x.id === 'admin');
+    if (i === -1) return;
+    TOOLS.splice(i, 1);
+    $id('tool-admin')?.remove();
+    if (activeTool === 'admin') showTool('products');
+    renderTools();
+  }
+
+  // Lista de herramientas de administrador (por ahora, una; para añadir otra basta una entrada más aquí)
+  function panel() {
+    const tools = [
+      { icon: '<path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>', title: 'Añadir producto', text: 'Pega un enlace: se leen el nombre, la foto y el precio, los editas y sale el primero en Novedades.', run: () => productForm() },
+    ];
+    const wrap = document.createElement('div');
+    wrap.className = 'adm-panel';
+    const h = document.createElement('h2');
+    h.className = 'tool-title';
+    h.textContent = 'Herramientas de administrador';
+    const list = document.createElement('div');
+    list.className = 'adm-tools';
+    for (const t of tools) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'adm-tool';
+      b.innerHTML = `<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">${t.icon}</svg><span class="adm-tool-t"></span><span class="adm-tool-d"></span>`;
+      b.querySelector('.adm-tool-t').textContent = t.title;
+      b.querySelector('.adm-tool-d').textContent = t.text;
+      b.onclick = t.run;
+      list.append(b);
+    }
+    wrap.append(h, list);
+    return wrap;
+  }
+
   function activate() {
     active = true;
     document.documentElement.dataset.admin = '1';
-    if ($id('adminBtn')) return;
-    const b = document.createElement('button');
-    b.className = 'icon-btn';
-    b.id = 'adminBtn';
-    b.type = 'button';
-    b.title = 'Añadir producto (administrador)';
-    b.setAttribute('aria-label', b.title);
-    b.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8.5v7M8.5 12h7"/></svg>';
-    b.onclick = () => productForm();
-    $id('accountBtn').before(b);
+    addTab();
   }
 
   function deactivate() {
@@ -82,7 +126,7 @@ const Admin = (() => {
     tok = null;
     store.set(null);
     delete document.documentElement.dataset.admin;
-    $id('adminBtn')?.remove();
+    removeTab();
   }
 
   async function start() {
@@ -115,8 +159,8 @@ const Admin = (() => {
     }
     box.append(
       el('p', { class: 'modal-note', text: '✓ Este dispositivo está autorizado.' }),
+      el('p', { class: 'modal-note', text: 'Las herramientas están en la pestaña «Admin».' }),
       el('div', { class: 'adm-actions' },
-        el('button', { class: 'btn ghost', type: 'button', text: 'Añadir producto', onclick: () => productForm() }),
         el('button', { class: 'btn ghost', type: 'button', text: 'Dispositivos', onclick: devicesModal }),
         el('button', { class: 'btn ghost', type: 'button', text: 'Descargar copia (CSV)', onclick: downloadCsv }),
       ),
@@ -374,6 +418,6 @@ const Admin = (() => {
   }
 
   start();
-  return { menu, accountSection };
+  return { menu, accountSection, active: () => active };
 })();
 window.Admin = Admin;

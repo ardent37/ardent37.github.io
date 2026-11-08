@@ -621,14 +621,14 @@ let extraItems = [];    // los productos propios
 async function fetchExtras({ fresh = false } = {}) {
   if (!CONFIG.accountApi) return [];
   try {
-    const r = await fetch(`${CONFIG.accountApi}/products/extra`, fresh ? { cache: 'no-store' } : {});
+    const r = await fetch(`${CONFIG.accountApi}/products/extra`, { cache: 'no-store' }); // sin caché del navegador: un cambio del administrador se ve al recargar
     if (!r.ok) return null;
     const j = await r.json();
     return Array.isArray(j.items) ? j.items : null;
   } catch { return null; }
 }
 
-// Los productos propios van primero (así salen los primeros en Novedades y en Todo); si ya estaban en la hoja, mandan los propios
+// Los productos propios van al final de la lista (en Novedades se colocan primero: ver applyFilters); si ya estaban en la hoja, mandan los propios
 function mergeExtras(list, items) {
   const extra = items.map((x) => {
     const categories = (x.categories || []).map(categoryKey);
@@ -639,7 +639,7 @@ function mergeExtras(list, items) {
     };
   });
   const keys = new Set(extra.map((p) => productKeyOf(p.link)));
-  return [...extra, ...list.filter((p) => !keys.has(productKeyOf(p.link)))].map((p, i) => ({ ...p, id: i }));
+  return [...list.filter((p) => !keys.has(productKeyOf(p.link))), ...extra].map((p, i) => ({ ...p, id: i }));
 }
 
 function applyExtras() {
@@ -871,6 +871,9 @@ function applyFilters() {
   if (state.sort === 'price-asc') list = list.slice().sort(byPrice);
   else if (state.sort === 'price-desc') list = list.slice().sort((a, b) => byPrice(b, a));
   else if (state.sort === 'name') list = list.slice().sort((a, b) => a.name.localeCompare(b.name, lang));
+
+  // En Novedades, los productos que añade el administrador van primero (los más recientes antes)
+  if (state.category === 'Update' && state.sort === 'default') list = [...list.filter((p) => p.adminId), ...list.filter((p) => !p.adminId)];
 
   // La hoja original siempre va primero; los productos importados, después
   if (state.source === 'all') list = [...list.filter((p) => !p.src), ...list.filter((p) => p.src)];
