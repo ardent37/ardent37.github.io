@@ -2,7 +2,7 @@
   "name": "cnside.app",
   "short_name": "cnside",
   "description": "Busca entre miles de productos y cómpralos con USFans.",
-  "start_url": "/",
+  "start_url": "/app/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",

@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="USFans+">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>Chinaside | Agents, Spreadsheets, QC</title>
+  <meta name="description" content="Search thousands of Taobao, Weidian and 1688 products, check QC photos and buy with USFans without leaving the site.">
+  <link rel="canonical" href="https://cnside.app/en/app/">
+  <link rel="alternate" hreflang="es" href="https://cnside.app/app/">
+  <link rel="alternate" hreflang="en" href="https://cnside.app/en/app/">
+  <link rel="alternate" hreflang="pl" href="https://cnside.app/pl/app/">
+  <link rel="alternate" hreflang="x-default" href="https://cnside.app/app/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="USFans+ Finds">
+  <meta property="og:title" content="Chinaside | Agents, Spreadsheets, QC">
+  <meta property="og:description" content="Search thousands of Taobao, Weidian and 1688 products, check QC photos and buy with USFans without leaving the site.">
+  <meta property="og:url" content="https://cnside.app/en/app/">
+  <meta property="og:image" content="https://cnside.app/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="en_GB">
+  <meta property="og:locale:alternate" content="es_ES">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Chinaside | Agents, Spreadsheets, QC">
+  <meta name="twitter:description" content="Search thousands of Taobao, Weidian and 1688 products, check QC photos and buy with USFans without leaving the site.">
+  <meta name="twitter:image" content="https://cnside.app/og-image.png">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"USFans+ Finds","url":"https://cnside.app/en/app/","inLanguage":"en","description":"Search thousands of Taobao, Weidian and 1688 products, check QC photos and buy with USFans without leaving the site.","publisher":{"@type":"Organization","name":"Salty","url":"https://saltychina.com/","logo":"https://cnside.app/icon-512.png"}}</script>
+  <meta name="theme-color" content="#f5f5f7" id="themeColor">
+  <script>
+    // Tema claro por defecto; el oscuro solo si el usuario lo eligió antes
+    try { if (localStorage.getItem('theme') === 'dark') document.documentElement.dataset.theme = 'dark'; } catch (e) {}
+    // Idioma según la dirección: / = español, /en/ = inglés, /pl/ = polaco (así Google indexa cada uno por separado)
+    try { var ag = localStorage.getItem('agent'); if (ag) document.documentElement.dataset.agent = ag; } catch (e) {}
+    document.documentElement.lang = /^\/en(\/|$)/.test(location.pathname) ? 'en' : /^\/pl(\/|$)/.test(location.pathname) ? 'pl' : 'es';
+  </script>
+  <link rel="icon" href="/favicon.ico?v=2" sizes="48x48">
+  <link rel="icon" href="/favicon-32.png?v=2" type="image/png" sizes="32x32">
+  <link rel="icon" href="/icon-192.png?v=2" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="/styles.css?v=78">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js" defer></script>
+  <script src="/app.js?v=81" defer></script>
+  <script src="/accounts.js?v=26" defer></script>
+  <script src="/hauls.js?v=10" defer></script>
+  <script src="/admin.js?v=13" defer></script>
+  <script src="/stats.js?v=2" defer></script>
+  
+</head>
+<body>
+  <div class="app" id="app">
+    <!-- Panel lateral de herramientas -->
+    <aside class="drawer" id="drawer" aria-label="Herramientas">
+      <header class="drawer-head">
+        <div class="brand">
+          <svg class="brand-logo" viewBox="-3.0 -3.0 1859.5 373.1" role="img" aria-label="cnside.app" xmlns="http://www.w3.org/2000/svg"><path class="logo-name" d="M165.16 255.01 139.38 229.24C126.88 240.95 113.21 246.42 96.42 246.42C62.05 246.42 37.84 222.99 37.84 186.67C37.84 152.69 62.83 127.3 96.42 127.3C112.82 127.3 126.1 132.77 138.99 144.88L165.16 118.32C143.68 99.18 121.42 89.81 96.42 89.81C70.65 89.81 46.43 99.96 28.08 118.32C9.72 136.68 -0.04 160.89 -0.04 186.67C-0.04 212.44 9.72 236.66 28.08 255.01C46.43 273.37 70.25 283.52 96.42 283.52C121.81 283.52 143.68 274.15 165.16 255.01ZM236.24 278.45V178.07C236.24 144.49 251.47 126.91 279.59 126.91C308.1 126.91 323.72 144.49 323.72 178.07V278.45H361.21V177.68C361.21 119.1 333.88 89.81 279.98 89.81C226.47 89.81 198.75 119.49 198.75 177.68V278.45ZM386.6 229.63C397.93 264.78 422.53 283.52 456.12 283.52C496.34 283.52 522.51 257.75 522.51 221.03C522.51 201.9 515.87 187.84 501.81 176.12C492.44 168.7 477.99 164.8 460.02 158.55C444.01 153.08 435.81 148 435.81 135.9C435.81 125.35 444.01 116.76 454.95 116.76C466.27 116.76 472.52 123.01 480.33 137.07L506.5 123.4C495.56 101.14 479.55 89.81 457.29 89.81C426.04 89.81 404.95 110.9 404.95 139.02C404.95 165.19 421.36 180.42 453.77 192.13C476.82 200.34 488.53 207.37 488.53 224.94C488.53 240.95 476.82 251.89 458.46 251.89C439.32 251.89 427.61 239.78 417.84 214.01ZM561.96 278.45H599.06V95.28H561.96ZM557.66 55.44C557.66 68.33 567.42 78.48 580.31 78.48C593.2 78.48 603.35 68.33 603.35 55.44C603.35 42.55 593.2 32.4 580.31 32.4C567.42 32.4 557.66 42.55 557.66 55.44ZM793.16 115.2C774.8 98.79 754.11 91.37 729.89 91.37C704.51 91.37 683.42 99.96 665.45 117.93C647.1 136.29 636.94 160.5 636.94 186.28C636.94 212.05 647.1 236.66 665.45 255.01C683.81 273.37 708.02 283.13 733.8 283.13C770.12 283.13 799.8 267.9 814.25 243.3C826.75 221.82 830.65 193.31 830.65 155.03V-0.02H793.16ZM791.21 188.62C791.21 222.21 766.6 246.03 732.23 246.03C697.09 246.03 673.65 221.82 673.65 186.67C673.65 151.91 698.65 126.91 732.23 126.91C765.82 126.91 791.21 152.3 791.21 188.62ZM899.78 169.48C906.42 139.8 930.24 121.44 956.8 121.44C985.31 121.44 1004.84 138.63 1009.91 169.48ZM1025.54 255.01 999.76 229.24C987.26 240.95 973.59 246.42 956.8 246.42C927.12 246.42 906.42 229.24 901.73 202.29H1049.75C1049.75 199.16 1050.14 196.43 1050.14 193.31C1050.14 128.87 1013.43 89.81 958.75 89.81C902.51 89.81 860.33 133.16 860.33 186.67C860.33 212.44 870.1 236.66 888.45 255.01C906.81 273.37 930.63 283.52 956.8 283.52C982.19 283.52 1004.06 274.15 1025.54 255.01Z"/><path class="logo-ext" d="M1092.71 257.36C1092.71 272.2 1104.43 283.91 1118.88 283.91C1133.33 283.91 1145.44 272.2 1145.44 257.36C1145.44 242.91 1133.33 230.8 1118.88 230.8C1104.43 230.8 1092.71 242.91 1092.71 257.36ZM1283.69 126.13C1316.5 126.13 1341.88 151.91 1341.88 187.06C1341.88 222.6 1317.67 246.42 1281.74 246.42C1247.37 246.42 1223.15 222.6 1223.15 189.01C1223.15 151.52 1250.1 126.13 1283.69 126.13ZM1363.75 235.88 1378.2 278.84H1417.26L1381.72 172.61C1374.69 151.13 1368.05 131.99 1352.43 116.37C1334.46 98.79 1312.2 89.81 1284.86 89.81C1227.06 89.81 1184.88 132.77 1184.88 186.67C1184.88 242.91 1224.72 283.52 1281.74 283.52C1318.06 283.52 1346.57 267.12 1363.75 235.88ZM1474.28 184.32C1474.28 150.74 1498.49 127.3 1532.86 127.3C1568.01 127.3 1591.44 151.52 1591.44 186.67C1591.44 221.43 1566.45 246.42 1532.86 246.42C1499.27 246.42 1474.28 220.64 1474.28 184.32ZM1473.5 257.75C1491.85 274.15 1512.16 281.96 1536.37 281.96C1561.76 281.96 1583.24 272.98 1601.21 255.01C1619.56 236.66 1629.33 212.44 1629.33 186.67C1629.33 160.89 1619.56 136.68 1601.21 118.32C1582.85 99.96 1558.25 89.81 1532.47 89.81C1496.15 89.81 1466.86 105.43 1452.41 130.04C1439.91 151.52 1436 180.03 1436 218.3V367.1H1473.5ZM1698.45 184.32C1698.45 150.74 1722.67 127.3 1757.03 127.3C1792.18 127.3 1815.62 151.52 1815.62 186.67C1815.62 221.43 1790.62 246.42 1757.03 246.42C1723.45 246.42 1698.45 220.64 1698.45 184.32ZM1697.67 257.75C1716.03 274.15 1736.34 281.96 1760.55 281.96C1785.94 281.96 1807.42 272.98 1825.38 255.01C1843.74 236.66 1853.5 212.44 1853.5 186.67C1853.5 160.89 1843.74 136.68 1825.38 118.32C1807.02 99.96 1782.42 89.81 1756.64 89.81C1720.32 89.81 1691.03 105.43 1676.58 130.04C1664.08 151.52 1660.18 180.03 1660.18 218.3V367.1H1697.67Z"/></svg>
+        </div>
+        <div class="head-actions">
+        <div class="agent-select" id="agentSelect">
+          <button class="agent-btn" id="agentBtn" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Agent">
+            <img class="agent-ico" src="/agents/usfans.png" alt="" width="18" height="18"><span class="lbl">USFans</span>
+            <svg class="chev" viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="source-menu agent-menu" id="agentMenu" role="listbox" hidden></div>
+        </div>
+        <div class="lang-switch" role="group" data-i18n-attr="aria-label:language">
+          <button type="button" data-lang="es" lang="es">ES</button>
+          <button type="button" data-lang="en" lang="en">EN</button>
+          <button type="button" data-lang="pl" lang="pl">PL</button>
+        </div>
+        <button class="icon-btn" id="offerBtn" type="button" data-i18n-attr="title:offerBtnTitle;aria-label:offerBtnTitle">
+          <svg viewBox="0 0 24 24" width="18" height="18"><path d="M3.5 12.2V6.5a2 2 0 0 1 2-2h5.3a2 2 0 0 1 1.4.6l8 8a2 2 0 0 1 0 2.8l-5.3 5.3a2 2 0 0 1-2.8 0l-8-8a2 2 0 0 1-.6-1.4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="8.3" cy="8.3" r="1.4" fill="currentColor"/></svg>
+        </button>
+        <button class="icon-btn" id="accountBtn" type="button" hidden data-i18n-attr="title:account;aria-label:account">
+          <svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="8.5" r="3.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M4.8 19.5c.9-3.3 3.6-5 7.2-5s6.3 1.7 7.2 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+        <button class="icon-btn" id="themeToggle" aria-pressed="false">
+          <svg class="ico-moon" viewBox="0 0 24 24" width="17" height="17"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+          <svg class="ico-sun" viewBox="0 0 24 24" width="17" height="17"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+        </div>
+      </header>
+
+      <nav class="tools" id="tools" role="tablist" hidden></nav>
+
+      <section class="tool" id="tool-products" role="tabpanel">
+        <div class="search-wrap">
+          <svg class="search-ico" viewBox="0 0 24 24" width="16" height="16"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <input id="search" type="search" data-i18n-attr="placeholder:search;aria-label:searchLabel" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="fold" id="fold"><div class="fold-in">
+        <div class="source-bar" id="sourceBar" hidden>
+          <div class="source-select" id="sourceSelect">
+            <button class="source-btn" id="sourceBtn" type="button" aria-haspopup="listbox" aria-expanded="false"></button>
+            <div class="source-menu" id="sourceMenu" role="listbox" hidden></div>
+          </div>
+          <button class="mini-btn" id="importBtn" type="button" data-i18n-attr="title:importTitle;aria-label:importTitle">
+            <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 15V4m0 0L8 8m4-4 4 4M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span data-i18n="importShort">Importar Spreadsheet</span>
+          </button>
+        </div>
+        <div class="filters" id="filters">
+          <button class="chip-arrow prev" id="chipsPrev" data-i18n-attr="aria-label:prevCats" tabindex="-1">
+            <svg viewBox="0 0 24 24" width="14" height="14"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="chips" id="chips" role="toolbar" data-i18n-attr="aria-label:categories"></div>
+          <button class="chip-arrow next" id="chipsNext" data-i18n-attr="aria-label:nextCats" tabindex="-1">
+            <svg viewBox="0 0 24 24" width="14" height="14"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+        <div class="list-head">
+          <p class="count" id="count" data-i18n="loading">Cargando productos…</p>
+          <div class="cols-switch" id="colsSwitch" role="group" data-i18n-attr="aria-label:colsLabel"><button type="button" class="cols-btn" data-cols="2" aria-pressed="false" data-i18n-attr="aria-label:cols2"><svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor" aria-hidden="true"><rect x="2.00" y="3" width="7.20" height="14" rx="1.4"/><rect x="10.80" y="3" width="7.20" height="14" rx="1.4"/></svg></button><button type="button" class="cols-btn" data-cols="3" aria-pressed="false" data-i18n-attr="aria-label:cols3"><svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor" aria-hidden="true"><rect x="2.00" y="3" width="4.27" height="14" rx="1.4"/><rect x="7.87" y="3" width="4.27" height="14" rx="1.4"/><rect x="13.73" y="3" width="4.27" height="14" rx="1.4"/></svg></button><button type="button" class="cols-btn" data-cols="4" aria-pressed="false" data-i18n-attr="aria-label:cols4"><svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor" aria-hidden="true"><rect x="2.00" y="3" width="2.80" height="14" rx="1.4"/><rect x="6.40" y="3" width="2.80" height="14" rx="1.4"/><rect x="10.80" y="3" width="2.80" height="14" rx="1.4"/><rect x="15.20" y="3" width="2.80" height="14" rx="1.4"/></svg></button></div>
+          <button type="button" class="price-btn" id="priceBtn" aria-haspopup="dialog" aria-expanded="false" data-i18n-attr="aria-label:priceFilter;title:priceFilter"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6.5h7.2M16.8 6.5H20M4 12h2.2M11.8 12H20M4 17.5h6.2M15.8 17.5H20"/><path d="M14 4v5M9 9.5v5M13 15v5"/></svg></button>
+          <div class="sort-wrap">
+            <select id="sort" data-i18n-attr="aria-label:sortLabel">
+              <option value="default" data-i18n="sortDefault">Destacados</option>
+              <option value="price-asc" data-i18n="sortPriceAsc">Precio ↑</option>
+              <option value="price-desc" data-i18n="sortPriceDesc">Precio ↓</option>
+              <option value="name" data-i18n="sortName">Nombre A–Z</option>
+            </select>
+          </div>
+        </div>
+        </div></div>
+        <div class="list" id="list">
+          <div class="grid" id="grid"></div>
+          <div class="sentinel" id="sentinel"></div>
+        </div>
+      </section>
+
+      <section class="tool" id="tool-hauls" role="tabpanel" hidden></section>
+
+      <section class="tool" id="tool-qc" role="tabpanel" hidden>
+        <form class="qc-form" id="qcForm" autocomplete="off">
+          <div class="search-wrap">
+            <svg class="search-ico" viewBox="0 0 24 24" width="16" height="16"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <input id="qcInput" type="url" inputmode="url" spellcheck="false" data-i18n-attr="placeholder:qcPlaceholder;aria-label:qcPlaceholder">
+          </div>
+          <button class="btn qc-submit" type="submit" data-i18n="qcSearch">Buscar QC</button>
+        </form>
+        <p class="qc-help" data-i18n="qcHelp">Pega un enlace de Taobao, Weidian, 1688 o de cualquier agente.</p>
+        <div class="qc-result" id="qcResult" aria-live="polite"></div>
+        <!-- Página de FinderQC con las fotos QC del producto: solo aparece tras buscar -->
+        <div class="qc-view" id="qcView" hidden>
+          <div class="qc-view-bar">
+            <span class="qc-view-label" id="qcViewLabel"></span>
+            <a class="btn ghost" id="qcOpenSource" href="#" target="_blank" rel="noopener" data-i18n="qcOpenSource">Abrir en FinderQC ↗</a>
+          </div>
+          <div class="qc-frame-wrap">
+            <iframe id="qcFrame" title="FinderQC" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+            <div class="frame-loading" id="qcLoading"><span class="spinner"></span></div>
+          </div>
+        </div>
+      </section>
+    </aside>
+
+    <!-- Divisor: arrastrar para cambiar el ancho del panel; la pestaña lo expande a pantalla completa -->
+    <div class="resizer" id="resizer" role="separator" aria-orientation="vertical" tabindex="0" data-i18n-attr="aria-label:resizePanel;title:resizePanel">
+      <button class="expand-tab" id="expandTab" type="button" data-i18n-attr="aria-label:expandPanel;title:expandPanel">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+
+    <!-- Zona principal: USFans incrustado -->
+    <main class="main" id="main">
+      <h1 class="sr-only sr-h1">China shipping agent: search products, check QC photos and buy with USFans</h1>
+      <div class="bar">
+        <button class="btn ghost" id="openDrawer" data-i18n-attr="aria-label:showProducts">
+          <svg viewBox="0 0 24 24" width="16" height="16"><rect x="3.5" y="4.5" width="17" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9.5 4.5v15" stroke="currentColor" stroke-width="1.6"/></svg>
+          <span data-i18n="products">Productos</span>
+        </button>
+        <div class="tabs" id="tabs" role="tablist" data-i18n-attr="aria-label:tabsLabel"></div>
+        <button class="icon-btn" id="newTab" data-i18n-attr="title:newTab;aria-label:newTab">
+          <svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+        <button class="btn ghost" id="goHome" data-i18n="goHome" hidden>← Registro</button>
+        <a class="btn" id="openTab" href="#" target="_blank" rel="noopener" data-i18n="openBrowser">Abrir en navegador</a>
+      </div>
+      <div class="urlbar" id="urlbar">
+        <button class="icon-btn sm" id="copyUrl" type="button" data-i18n-attr="title:copyLink;aria-label:copyLink">
+          <svg class="ico-copy" viewBox="0 0 24 24" width="15" height="15"><rect x="8.5" y="8.5" width="11" height="11" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M15.5 8.5V7A2.5 2.5 0 0 0 13 4.5H7A2.5 2.5 0 0 0 4.5 7v6A2.5 2.5 0 0 0 7 15.5h1.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          <svg class="ico-done" viewBox="0 0 24 24" width="15" height="15"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <a class="icon-btn sm" id="openTabIcon" href="#" target="_blank" rel="noopener" data-i18n-attr="title:openInBrowser;aria-label:openInBrowser">
+          <svg viewBox="0 0 24 24" width="15" height="15"><path d="M14 5h5v5M19 5l-8 8M18 14v3.5A2.5 2.5 0 0 1 15.5 20h-9A2.5 2.5 0 0 1 4 17.5v-9A2.5 2.5 0 0 1 6.5 6H10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <input class="url-field" id="urlField" type="text" inputmode="url" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="URL" data-i18n-attr="placeholder:urlPlaceholder">
+      </div>
+      <div class="frame-wrap" id="frames">
+        <div class="frame-loading" id="frameLoading"><span class="spinner"></span></div>
+      </div>
+      <p class="hint" data-i18n-html="hint">Haz clic derecho en un producto para ver más opciones. Si algo no carga o no puedes pagar, abre la página en tu navegador con el icono de la barra de direcciones.</p>
+    </main>
+  </div>
+  <div class="menu" id="menu" role="menu" hidden></div>
+  <div class="modal" id="modal" hidden><div class="modal-card" id="modalCard" role="dialog" aria-modal="true"></div></div>
+
+  <!-- Móvil: lengüetas para deslizar entre USFans y el panel (los toques sobre USFans no llegan a la web) -->
+  <div class="pull-tab pull-left" id="swipeEdge" role="button" tabindex="0" data-i18n-attr="aria-label:showProducts">
+    <span class="pull-tab-grip"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+  </div>
+  <div class="pull-tab pull-right" id="swipeBack" role="button" tabindex="0" data-i18n-attr="aria-label:backToUsfans">
+    <span class="pull-tab-grip"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+  </div>
+
+  <!-- Móvil: guía de gestos la primera vez, señalando la lengüeta que hay que deslizar -->
+  <div class="coach" id="coach" hidden>
+    <div class="coach-hint" id="coachHint">
+      <p class="coach-title" id="coachTitle"></p>
+      <p class="coach-text" id="coachText"></p>
+    </div>
+    <div class="coach-gesture" aria-hidden="true"><span class="coach-trail"></span><svg class="coach-hand" viewBox="0 0 24 24" width="46" height="46"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V10m0-.5V4a1.5 1.5 0 0 1 3 0v6m0-.5V5.5a1.5 1.5 0 0 1 3 0V14a7 7 0 0 1-7 7h-.8a6 6 0 0 1-4.6-2.2L3.4 15.1a1.6 1.6 0 0 1 2.4-2.1L9 15" fill="#fff" stroke="#1d1d1f" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <button class="coach-skip" id="coachSkip" type="button" data-i18n="coachSkip">Saltar</button>
+  </div>
+  <!-- Móvil: oferta de bienvenida (solo la primera vez) y registro en USFans a pantalla completa -->
+  <div class="offer" id="offer" hidden>
+    <div class="offer-card" role="dialog" aria-modal="true" aria-labelledby="offerTitle">
+      <h2 id="offerTitle" data-i18n="offerTitle">Un 40 % de descuento en tu envío</h2>
+      <p data-i18n="offerText">Regístrate ahora en USFans con nuestro código y consigue tu cupón del 40 % de descuento en el envío.</p>
+      <button class="btn offer-go" id="offerGo" type="button" data-i18n="offerAccept">Obtener mi cupón</button>
+      <button class="btn ghost offer-later" id="offerLater" type="button" data-i18n="offerLater">Ahora no</button>
+    </div>
+  </div>
+  <section class="regview" id="regView" aria-hidden="true">
+    <header class="reg-bar">
+      <button class="reg-back" id="regBack" type="button">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span data-i18n="offerBack">Volver a las herramientas</span>
+      </button>
+    </header>
+    <iframe id="regFrame" title="USFans" referrerpolicy="strict-origin-when-cross-origin" allow="clipboard-write" src="about:blank"></iframe>
+  </section>
+</body>
+</html>

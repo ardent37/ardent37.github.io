@@ -449,7 +449,7 @@ const Hauls = (() => {
           }));
           return box;
         }
-        const url = `${location.origin}/?${param}=${code}`;
+        const url = `${location.origin}/app/?${param}=${code}`;
         const field = el('input', { type: 'text', readonly: true, value: url, 'aria-label': title });
         field.addEventListener('focus', () => field.select());
         const copy = el('button', { class: 'btn modal-btn', type: 'button', text: t('shareCopy') });

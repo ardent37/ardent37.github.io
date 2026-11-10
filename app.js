@@ -239,7 +239,7 @@ const I18N = {
     qcOpenProduct: 'Open product',
     seoTitle: 'Chinaside | Agents, Spreadsheets, QC',
     seoDescription: 'Search thousands of Taobao, Weidian and 1688 products, check QC photos and buy with USFans without leaving the site.',
-    seoH1: 'China shopping agent: search products, check QC photos and buy with USFans',
+    seoH1: 'China shipping agent: search products, check QC photos and buy with USFans',
     viewQc: 'View QC photos',
     coachOpenTitle: '← Tap the tab',
     coachOpenText: 'to see the products and tools.',
@@ -357,7 +357,7 @@ const I18N = {
 
 // Lo fija el <head> (idioma guardado o el del navegador); se cambia con el selector ES | EN
 let lang = ['en', 'pl'].includes(document.documentElement.lang) ? document.documentElement.lang : 'es';
-const LANG_PATH = { es: '/', en: '/en/', pl: '/pl/' };
+const LANG_PATH = { es: '/app/', en: '/en/app/', pl: '/pl/app/' };
 const LANG_LOCALE = { es: 'es-ES', en: 'en-GB', pl: 'pl-PL' };
 const locale = () => LANG_LOCALE[lang];
 
@@ -435,10 +435,22 @@ const AGENTS = {
   },
 };
 let agentId = (() => {
+  // La portada manda al agente elegido en la dirección (?agent=oopbuy): se guarda y se quita de la barra
+  let fromUrl = null;
   try {
-    const saved = localStorage.getItem('agent');
+    const u = new URL(location.href);
+    const q = u.searchParams.get('agent');
+    if (q) {
+      if (AGENTS[q]) fromUrl = q;
+      u.searchParams.delete('agent');
+      history.replaceState(null, '', u.pathname + u.search + u.hash);
+    }
+  } catch { /* sin historial */ }
+  try {
+    if (fromUrl) localStorage.setItem('agent', fromUrl);
+    const saved = fromUrl || localStorage.getItem('agent');
     return AGENTS[saved] ? saved : 'usfans';
-  } catch { return 'usfans'; }
+  } catch { return fromUrl || 'usfans'; }
 })();
 document.documentElement.dataset.agent = agentId;
 Object.defineProperty(CONFIG, 'homeUrl', { get: () => AGENTS[agentId].home });
